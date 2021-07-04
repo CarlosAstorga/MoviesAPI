@@ -11,6 +11,7 @@ const filters = {
 	year: "",
 	title: "",
 	page: 1,
+	imdbID: "",
 };
 
 typeSelector.addEventListener("blur", handleSelectIcon);
@@ -26,6 +27,7 @@ searchButton.addEventListener("click", () => {
 		filters.type = typeSelector.value;
 		filters.year = yearInput.value.trim();
 		filters.title = searchInput.value.trim();
+		filters.imdbID = "";
 		search();
 	}
 });
@@ -82,7 +84,14 @@ function createError(error, element) {
 function search() {
 	clean(moviesContainer);
 	request()
-		.then((res) => {})
+		.then((res) => {
+			const fragment = document.createDocumentFragment();
+			for (const movie of res.Search) fragment.appendChild(createCard(movie));
+			return { movies: fragment, total: res.totalResults };
+		})
+		.then((res) => {
+			moviesContainer.appendChild(res.movies);
+		})
 		.catch((error) => {
 			createError(error, moviesContainer);
 		});
@@ -101,6 +110,8 @@ function handleSelectIcon() {
  * @returns {String} - Url.
  */
 function generateUrl() {
+	if (filters.imdbID) return `${baseUri}&i=${filters.imdbID}&plot=full`;
+
 	let url = baseUri + "&s=" + filters.title;
 	if (filters.type != "all") url += `&type=${filters.type}`;
 	if (filters.year) url += `&y=${filters.year}`;
@@ -119,4 +130,79 @@ async function request() {
 	if (res.Response == "False") throw Error(res.Error);
 
 	return res;
+}
+
+/**
+ * Creates a card with the movie information.
+ * @param {Object} movie - The movie to be displayed.
+ * @returns {HTMLElement} - The card element
+ */
+function createCard(movie) {
+	const { Poster, Title, imdbID } = movie;
+	const icon = getIcon(imdbID);
+
+	const div = document.createElement("div");
+	div.classList = "poster";
+	div.innerHTML = `
+        <div class="poster-container">
+            <span class="ribbon">
+                <i class="${icon} fa-star icon"></i>
+            </span>
+            <img 
+                id="${imdbID}" 
+                src="${Poster == "N/A" ? "assets/img/default.png" : Poster}" 
+            />
+        </div>
+        <div class="title-container">
+            <p class="title">${Title}</p>
+        </div>
+    `;
+
+	const ribbon = div.firstElementChild.firstElementChild;
+	const star = ribbon.firstElementChild;
+	const poster = ribbon.nextElementSibling;
+	if (icon == "fas") ribbon.classList.add("favorite");
+
+	ribbon.addEventListener("click", (e) => {
+		toggleFavorite(movie);
+		toggleElementClass(star, "fas", "far");
+		toggleElementClass(ribbon, "favorite");
+	});
+
+	poster.addEventListener("click", (e) => {
+		filters.imdbID = e.target.id;
+		request()
+			.then((res) => {})
+			.catch((error) => createError(error, moviesContainer));
+	});
+
+	return div;
+}
+
+/**
+ * Gets the icon class
+ * @param {Number} imdbID - Movie id.
+ * @returns {String} - The icon class.
+ */
+function getIcon(imdbID) {
+	return localStorage.getItem(imdbID) ? "fas" : "far";
+}
+
+/**
+ * Toggle the movie in the localStorage.
+ * @param {Object} movie - The movie to be stored in the localStorage .
+ */
+function toggleFavorite(movie) {
+	getIcon(movie.imdbID) == "fas"
+		? localStorage.removeItem(`${movie.imdbID}`)
+		: localStorage.setItem(`${movie.imdbID}`, JSON.stringify(movie));
+}
+
+/**
+ * Toggle element class
+ * @param {HTMLElement} element - The DOM element
+ * @param  {...String} classes - The css classes to toggle
+ */
+function toggleElementClass(element, ...classes) {
+	classes.forEach((_) => element.classList.toggle(_));
 }
