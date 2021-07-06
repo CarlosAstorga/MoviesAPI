@@ -54,7 +54,7 @@ body {
 
 header {
 	display: flex;
-	padding: 2.2rem 0;
+	padding: 27.5px 0;
 }
 
 header > div:not(:last-child) {
@@ -224,4 +224,50 @@ header > div:not(:last-child) {
 	font-weight: var(--font-medium);
 	font-size: 0.825rem;
 	color: var(--title-color);
+}
+
+/* <--------------- PAGINATION ---------------> */
+.pagination {
+	display: flex;
+	margin: 32.5px 0;
+	justify-content: center;
+}
+
+.pagination a {
+	height: var(--btn-size);
+	width: var(--btn-size);
+	color: var(--font-color);
+	text-align: center;
+	line-height: var(--btn-size);
+	font-size: calc(var(--btn-size) / 10 * 4);
+	border-radius: var(--border-radius);
+}
+
+.pagination a:not(:last-child) {
+	margin-right: 0.25rem;
+}
+
+.pagination .item,
+.pagination .prev,
+.pagination .next {
+	cursor: pointer;
+}
+
+.pagination .prev,
+.pagination .next {
+	color: var(--accent-color);
+}
+
+.pagination .active {
+	color: var(--title-color);
+	background-color: var(--primary-color);
+}
+
+.pagination .ellipsis {
+	color: var(--accent-color);
+}
+
+.pagination a:not(.ellipsis):hover {
+	color: var(--title-color);
+	transition: 0.3s;
 }

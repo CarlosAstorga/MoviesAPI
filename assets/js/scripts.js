@@ -5,6 +5,7 @@ const searchInput = document.getElementById("searchInput");
 const typeSelector = document.querySelector(".select");
 const searchButton = document.getElementById("searchBtn");
 const moviesContainer = document.querySelector(".movies");
+const pagination = document.querySelector(".pagination");
 
 const filters = {
 	type: "",
@@ -12,6 +13,7 @@ const filters = {
 	title: "",
 	page: 1,
 	imdbID: "",
+	total: "",
 };
 
 typeSelector.addEventListener("blur", handleSelectIcon);
@@ -90,11 +92,14 @@ function search() {
 			return { movies: fragment, total: res.totalResults };
 		})
 		.then((res) => {
+			filters.total = res.total;
 			moviesContainer.appendChild(res.movies);
 		})
 		.catch((error) => {
+			filters.total = 0;
 			createError(error, moviesContainer);
-		});
+		})
+		.finally(createPagination);
 }
 
 /**
@@ -205,4 +210,81 @@ function toggleFavorite(movie) {
  */
 function toggleElementClass(element, ...classes) {
 	classes.forEach((_) => element.classList.toggle(_));
+}
+
+/**
+ * Creates the pagination.
+ */
+function createPagination() {
+	clean(pagination);
+
+	const pages = Math.ceil(filters.total / 10);
+	if (pages < 2) return;
+
+	const beforePage = filters.page - 1;
+	const afterPage = pages - filters.page;
+	const fragment = document.createDocumentFragment();
+
+	if (beforePage > 0) {
+		fragment.appendChild(
+			createPaginationItem("prev", '<i class="fas fa-angle-left"></i>')
+		);
+
+		if (beforePage < 4)
+			for (let index = 1; index <= beforePage; index++)
+				fragment.appendChild(createPaginationItem("item", index));
+		else {
+			fragment.appendChild(createPaginationItem("item", 1));
+			fragment.appendChild(
+				createPaginationItem("ellipsis", '<i class="fas fa-ellipsis-h"></i>')
+			);
+			fragment.appendChild(createPaginationItem("item", filters.page - 1));
+		}
+	}
+
+	fragment.appendChild(createPaginationItem("item active", filters.page));
+
+	if (afterPage > 0) {
+		if (afterPage < 4)
+			for (let index = 1; index <= afterPage; index++)
+				fragment.appendChild(
+					createPaginationItem("item", filters.page + index)
+				);
+		else {
+			fragment.appendChild(createPaginationItem("item", filters.page + 1));
+			fragment.appendChild(
+				createPaginationItem("ellipsis", '<i class="fas fa-ellipsis-h"></i>')
+			);
+			fragment.appendChild(createPaginationItem("item", pages));
+		}
+		fragment.appendChild(
+			createPaginationItem("next", '<i class="fas fa-angle-right"></i>')
+		);
+	}
+	pagination.appendChild(fragment);
+}
+
+/**
+ * Creates pagination item
+ * @param {String} css - Class
+ * @param {String} text - Text
+ * @returns
+ */
+function createPaginationItem(css, text) {
+	const item = document.createElement("a");
+
+	item.classList = css;
+	item.innerHTML = text;
+	if (css != "ellipsis")
+		item.addEventListener("click", (e) => {
+			if (e.target.textContent == filters.page) return null;
+			if (item.classList.contains("prev")) filters.page -= 1;
+			if (item.classList.contains("next")) filters.page += 1;
+			if (item.classList.contains("item"))
+				filters.page = parseInt(item.textContent);
+
+			searchButton.click();
+		});
+
+	return item;
 }
