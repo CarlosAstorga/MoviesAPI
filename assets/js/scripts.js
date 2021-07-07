@@ -6,6 +6,7 @@ const typeSelector = document.querySelector(".select");
 const searchButton = document.getElementById("searchBtn");
 const moviesContainer = document.querySelector(".movies");
 const pagination = document.querySelector(".pagination");
+const favoritesButton = document.getElementById("favoritesBtn");
 
 const filters = {
 	type: "",
@@ -14,6 +15,8 @@ const filters = {
 	page: 1,
 	imdbID: "",
 	total: "",
+	favorites: false,
+	movies: [],
 };
 
 typeSelector.addEventListener("blur", handleSelectIcon);
@@ -21,7 +24,8 @@ typeSelector.addEventListener("focus", handleSelectIcon);
 typeSelector.addEventListener("change", (e) => e.target.blur());
 
 searchInput.addEventListener("keyup", (e) => {
-	if (e.key === "Enter") searchButton.click();
+	if (e.key === "Enter" || (filters.favorites && !e.target.value))
+		searchButton.click();
 });
 
 searchButton.addEventListener("click", () => {
@@ -30,8 +34,18 @@ searchButton.addEventListener("click", () => {
 		filters.year = yearInput.value.trim();
 		filters.title = searchInput.value.trim();
 		filters.imdbID = "";
-		search();
+
+		if (filters.favorites) filter();
+		else search();
 	}
+});
+
+favoritesButton.addEventListener("click", (e) => {
+	clean(yearInput, pagination, searchInput, moviesContainer);
+	filters.page = 1;
+	filters.favorites = !filters.favorites;
+	favoritesButton.classList.toggle("bg-secondary");
+	if (filters.favorites) searchButton.click();
 });
 
 /**
@@ -47,7 +61,7 @@ function validate() {
 		createError("Must be a number", yearInput);
 	if (typeSelector.value && !options.includes(typeSelector.value))
 		createError("type not available", typeSelector);
-	if (searchInput.value.trim().length < 3)
+	if (searchInput.value.trim().length < 3 && !filters.favorites)
 		createError("The title must have at least 3 letters", searchInput);
 
 	const isValid = document.querySelector(".error");
@@ -56,14 +70,16 @@ function validate() {
 
 /**
  * Removes elements, sets innerHTML and so on.
- * @param {*} any
+ * @param  {...any} any
  */
-function clean(any) {
-	if (any instanceof Element) {
-		if (any.value === undefined) any.innerHTML = "";
-		else any.value = "";
-	} else
-		document.querySelectorAll("." + any).forEach((error) => error.remove());
+function clean(...any) {
+	any.forEach((_) => {
+		if (_ instanceof Element) {
+			if (_.value === undefined) _.innerHTML = "";
+			else _.value = "";
+		} else
+			document.querySelectorAll("." + _).forEach((error) => error.remove());
+	});
 }
 
 /**
@@ -172,6 +188,7 @@ function createCard(movie) {
 		toggleFavorite(movie);
 		toggleElementClass(star, "fas", "far");
 		toggleElementClass(ribbon, "favorite");
+		if (filters.favorites) searchButton.click();
 	});
 
 	poster.addEventListener("click", (e) => {
@@ -287,4 +304,46 @@ function createPaginationItem(css, text) {
 		});
 
 	return item;
+}
+
+/**
+ * Filters favorites
+ */
+function filter() {
+	clean(moviesContainer);
+	filters.movies = getFavorites();
+	filters.total = filters.movies.length;
+
+	const fragment = document.createDocumentFragment();
+	for (const movie of filters.movies.slice(
+		filters.page * 10 - 10,
+		filters.page * 10
+	))
+		moviesContainer.appendChild(fragment.appendChild(createCard(movie)));
+	createPagination();
+}
+
+/**
+ * Gets the favorites from the local storage
+ * @returns {Array} - Favorites
+ */
+function getFavorites() {
+	let favorites = [];
+	const keys = Object.keys(localStorage);
+
+	for (const x of keys) {
+		if (x.includes("tt")) favorites.push(JSON.parse(localStorage.getItem(x)));
+	}
+
+	if (filters.type == "all" && !filters.title && !filters.year)
+		return favorites;
+
+	return favorites.filter((movie) => {
+		if (
+			(filters.title && movie.Title.toLowerCase().includes(filters.title)) ||
+			(filters.type && filters.type != "all" && movie.Type == filters.type) ||
+			(filters.year && movie.Year == filters.year)
+		)
+			return movie;
+	});
 }

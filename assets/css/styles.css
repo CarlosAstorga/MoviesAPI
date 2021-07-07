@@ -271,3 +271,29 @@ header > div:not(:last-child) {
 	color: var(--title-color);
 	transition: 0.3s;
 }
+
+/* <--------------- FAVORITES ---------------> */
+.favorites {
+	position: relative;
+	height: calc(var(--btn-size) + 10px);
+	width: calc(var(--btn-size) + 10px);
+	background-color: var(--accent-color);
+	border-radius: 50px;
+}
+
+.favorites-btn {
+	margin: 5px 0;
+	height: var(--btn-size);
+	width: var(--btn-size);
+	color: var(--title-color);
+	background-color: var(--primary-color);
+	border: none;
+	border-radius: 50px;
+	cursor: pointer;
+	position: absolute;
+	left: 5px;
+}
+
+.bg-secondary {
+	background-color: var(--secondary-color);
+}
