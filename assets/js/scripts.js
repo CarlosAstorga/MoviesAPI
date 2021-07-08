@@ -7,6 +7,8 @@ const searchButton = document.getElementById("searchBtn");
 const moviesContainer = document.querySelector(".movies");
 const pagination = document.querySelector(".pagination");
 const favoritesButton = document.getElementById("favoritesBtn");
+const modal = document.getElementById("modal");
+const closeButton = document.getElementById("closeBtn");
 
 const filters = {
 	type: "",
@@ -46,6 +48,13 @@ favoritesButton.addEventListener("click", (e) => {
 	filters.favorites = !filters.favorites;
 	favoritesButton.classList.toggle("bg-secondary");
 	if (filters.favorites) searchButton.click();
+});
+
+closeButton.addEventListener("click", () => modal.classList.remove("show"));
+
+window.addEventListener("keyup", (e) => {
+	if (e.key === "Escape" && modal.classList.contains("show"))
+		closeButton.click();
 });
 
 /**
@@ -194,11 +203,98 @@ function createCard(movie) {
 	poster.addEventListener("click", (e) => {
 		filters.imdbID = e.target.id;
 		request()
-			.then((res) => {})
+			.then(createModal)
 			.catch((error) => createError(error, moviesContainer));
 	});
 
 	return div;
+}
+
+/**
+ * Creates the modal with the movie's data.
+ * @param {Object} movie - The movie to be displayed
+ */
+function createModal(movie) {
+	const container = modal.lastElementChild;
+	const genres = movie.Genre.split(",").reduce((acc, current) => {
+		return (acc += `<span class="tag">${current}</span>`);
+	}, "");
+
+	const stars = [...Array(10).keys()].reduce((acc, current) => {
+		if (current < Math.round(movie.imdbRating))
+			return (acc += `<i class="fas fa-star"></i>`);
+		else return (acc += `<i class="far fa-star"></i>`);
+	}, "");
+
+	const attrs = ["Country", "Runtime", "Director", "Actors"];
+	const data = attrs.reduce((acc, current) => {
+		if (movie[current] != "N/A") {
+			return (acc += ` <span class="subtitle">${current} </span> ${movie[current]}`);
+		} else return acc;
+	}, "");
+
+	container.innerHTML = `
+	<div class="genres">${genres}</div>
+	<h1 class="header">${movie.Title}</h1>
+	<div class="information">
+		<div class="data">
+			<p>
+				${data}
+			</p>
+			${
+				movie.imdbRating != "N/A"
+					? `<p class="rating">
+					<span class="subheader">RATING:</span> ${movie.imdbRating} / 10<br />
+					${stars}
+				</p>`
+					: ""
+			}
+			${
+				movie.Plot != "N/A"
+					? `<p>
+				<span class="subheader">PLOT:</span><br />
+				${movie.Plot}
+			</p>`
+					: ""
+			}
+			
+		</div>
+		<div class="picture">
+			<img
+				src="${movie.Poster == "N/A" ? "assets/img/default.png" : movie.Poster}" 
+			/>
+		</div>
+	</div>
+	<button class="action"></button>`;
+
+	const actionButton = container.lastElementChild;
+	const backgroundColor =
+		getIcon(movie.imdbID) == "fas" ? "bg-primary" : "bg-accent";
+	actionButton.classList.add(backgroundColor);
+
+	const serButtonContent = (favorite) => {
+		if (favorite == "fas")
+			actionButton.innerHTML = `Remove from favorites <i class="fas fa-star"></i>`;
+		else
+			actionButton.innerHTML = `Add to favorites <i class="far fa-star"></i>`;
+	};
+
+	serButtonContent(getIcon(movie.imdbID));
+	actionButton.addEventListener("click", () => {
+		toggleFavorite(movie);
+		serButtonContent(getIcon(movie.imdbID));
+		toggleElementClass(actionButton, "bg-primary", "bg-accent");
+
+		if (filters.favorites) searchButton.click();
+		else {
+			const poster = document.getElementById(movie.imdbID);
+			const ribbon = poster.previousElementSibling;
+			const star = ribbon.firstElementChild;
+			toggleElementClass(star, "fas", "far");
+			toggleElementClass(ribbon, "favorite");
+		}
+	});
+	modal.classList.add("show");
 }
 
 /**
