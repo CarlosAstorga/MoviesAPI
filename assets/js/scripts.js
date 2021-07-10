@@ -9,6 +9,7 @@ const pagination = document.querySelector(".pagination");
 const favoritesButton = document.getElementById("favoritesBtn");
 const modal = document.getElementById("modal");
 const closeButton = document.getElementById("closeBtn");
+const loader = document.getElementById("loader");
 
 const filters = {
 	type: "",
@@ -34,7 +35,10 @@ searchButton.addEventListener("click", () => {
 	if (validate()) {
 		filters.type = typeSelector.value;
 		filters.year = yearInput.value.trim();
-		filters.title = searchInput.value.trim();
+		if (filters.title != searchInput.value.trim()) {
+			filters.page = 1;
+			filters.title = searchInput.value.trim();
+		}
 		filters.imdbID = "";
 
 		if (filters.favorites) filter();
@@ -110,6 +114,7 @@ function createError(error, element) {
  */
 function search() {
 	clean(moviesContainer);
+	loader.classList.add("show");
 	request()
 		.then((res) => {
 			const fragment = document.createDocumentFragment();
@@ -122,9 +127,12 @@ function search() {
 		})
 		.catch((error) => {
 			filters.total = 0;
-			createError(error, moviesContainer);
+			createError(error, searchInput);
 		})
-		.finally(createPagination);
+		.finally((_) => {
+			loader.classList.remove("show");
+			createPagination();
+		});
 }
 
 /**
@@ -182,6 +190,7 @@ function createCard(movie) {
                 id="${imdbID}" 
                 src="${Poster == "N/A" ? "assets/img/default.png" : Poster}" 
             />
+			<div class="backdrop"></div>
         </div>
         <div class="title-container">
             <p class="title">${Title}</p>
@@ -191,6 +200,9 @@ function createCard(movie) {
 	const ribbon = div.firstElementChild.firstElementChild;
 	const star = ribbon.firstElementChild;
 	const poster = ribbon.nextElementSibling;
+	const backdrop = poster.nextElementSibling;
+
+	backdrop.style.backgroundImage = `url(${poster.src})`;
 	if (icon == "fas") ribbon.classList.add("favorite");
 
 	ribbon.addEventListener("click", (e) => {
@@ -201,10 +213,14 @@ function createCard(movie) {
 	});
 
 	poster.addEventListener("click", (e) => {
+		loader.classList.add("show");
+		modal.classList.add("show");
+		modal.lastElementChild.innerHTML = "";
 		filters.imdbID = e.target.id;
 		request()
 			.then(createModal)
-			.catch((error) => createError(error, moviesContainer));
+			.catch((error) => createError(error, moviesContainer))
+			.finally((_) => loader.classList.remove("show"));
 	});
 
 	return div;
