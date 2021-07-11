@@ -10,6 +10,7 @@ const favoritesButton = document.getElementById("favoritesBtn");
 const modal = document.getElementById("modal");
 const closeButton = document.getElementById("closeBtn");
 const loader = document.getElementById("loader");
+const clearButton = document.getElementById("clearBtn");
 
 const filters = {
 	type: "",
@@ -20,16 +21,33 @@ const filters = {
 	total: "",
 	favorites: false,
 	movies: [],
+	text: "",
 };
+
+const click = debounce(() => searchButton.click(), 1500);
+const keyup = debounce((e) => {
+	if (filters.text != e.target.value.trim()) {
+		filters.text = e.target.value.trim();
+		if (!(!filters.text && !filters.favorites)) click();
+	}
+});
+const clear = debounce(() => {
+	clean(yearInput, searchInput, moviesContainer, pagination, "error");
+});
 
 typeSelector.addEventListener("blur", handleSelectIcon);
 typeSelector.addEventListener("focus", handleSelectIcon);
-typeSelector.addEventListener("change", (e) => e.target.blur());
-
-searchInput.addEventListener("keyup", (e) => {
-	if (e.key === "Enter" || (filters.favorites && !e.target.value))
-		searchButton.click();
+typeSelector.addEventListener("change", (e) => {
+	e.target.blur();
+	if (searchInput.value.trim()) click();
 });
+
+yearInput.addEventListener("keyup", (e) => {
+	if (searchInput.value.trim() && e.target.value.trim() && filters.title)
+		click();
+});
+
+searchInput.addEventListener("keyup", keyup);
 
 searchButton.addEventListener("click", () => {
 	if (validate()) {
@@ -45,6 +63,8 @@ searchButton.addEventListener("click", () => {
 		else search();
 	}
 });
+
+clearButton.addEventListener("click", clear);
 
 favoritesButton.addEventListener("click", (e) => {
 	clean(yearInput, pagination, searchInput, moviesContainer);
@@ -127,7 +147,7 @@ function search() {
 		})
 		.catch((error) => {
 			filters.total = 0;
-			createError(error, searchInput);
+			createError(error.message, searchInput);
 		})
 		.finally((_) => {
 			loader.classList.remove("show");
@@ -458,4 +478,20 @@ function getFavorites() {
 		)
 			return movie;
 	});
+}
+
+/**
+ * Debounce function.
+ * @param {Function} func - Function to debounce.
+ * @param {Number} timeout - Time in milliseconds.
+ * @returns {Function}
+ */
+function debounce(func, timeout = 300) {
+	let timer;
+	return (...args) => {
+		clearTimeout(timer);
+		timer = setTimeout(() => {
+			func.apply(this, args);
+		}, timeout);
+	};
 }
