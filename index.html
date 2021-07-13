@@ -21,37 +21,45 @@
 					<option value="series">Serie</option>
 					<option value="episode">Episode</option>
 				</select>
-				<span class="select-btn"><i class="fas fa-angle-up"></i></span>
+				<span class="btn inner"><i class="fas fa-angle-up"></i></span>
 			</div>
 			<div class="year">
-				<input type="text" placeholder="Year" id="yearInput" />
-				<div class="year-btn">
+				<input
+					type="text"
+					inputmode="numeric"
+					pattern="[0-9]*"
+					placeholder="Year"
+					id="yearInput"
+					maxlength="4"
+				/>
+				<div class="btn inner">
 					<i class="far fa-calendar-alt"></i>
 				</div>
 			</div>
 			<div class="search">
 				<input type="text" placeholder="Type to search" id="searchInput" />
-				<div class="search-btn" id="searchBtn">
+				<div class="btn inner" id="searchBtn">
 					<i class="fas fa-search"></i>
 				</div>
 			</div>
-			<div class="clear">
-				<button class="clear-btn" id="clearBtn">
-					<i class="fas fa-eraser"></i>
-				</button>
+			<div class="btn clear" id="clearBtn">
+				<i class="fas fa-eraser"></i>
 			</div>
-			<div class="favorites">
-				<button class="favorites-btn" id="favoritesBtn">
-					<i class="fas fa-star"></i>
-				</button>
+			<div class="btn favorites" id="favoritesBtn">
+				<i class="fas fa-star"></i>
 			</div>
 		</header>
 		<main class="movies grid"></main>
 		<div class="pagination"></div>
 		<div id="modal" class="modal">
-			<span class="close-btn" id="closeBtn">
-				<i class="fas fa-times"></i>
-			</span>
+			<div class="nav">
+				<div class="nav-header">
+					<p class="nav-text" id="navText"></p>
+				</div>
+				<span class="close-btn" id="closeBtn">
+					<i class="fas fa-times"></i>
+				</span>
+			</div>
 			<div class="container"></div>
 		</div>
 		<div class="loader" id="loader"></div>

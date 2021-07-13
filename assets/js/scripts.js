@@ -1,6 +1,6 @@
 const baseUri = "http://www.omdbapi.com/?apikey=479403fc";
 const yearInput = document.getElementById("yearInput");
-const typeIcon = document.querySelector(".select-btn i");
+const typeIcon = document.querySelector(".type .btn i");
 const searchInput = document.getElementById("searchInput");
 const typeSelector = document.querySelector(".select");
 const searchButton = document.getElementById("searchBtn");
@@ -11,6 +11,8 @@ const modal = document.getElementById("modal");
 const closeButton = document.getElementById("closeBtn");
 const loader = document.getElementById("loader");
 const clearButton = document.getElementById("clearBtn");
+const body = document.querySelector("body");
+const navText = document.getElementById("navText");
 
 const filters = {
 	type: "",
@@ -24,15 +26,22 @@ const filters = {
 	text: "",
 };
 
+const defaultFilters = Object.assign({}, filters);
+
 const click = debounce(() => searchButton.click(), 1500);
 const keyup = debounce((e) => {
 	if (filters.text != e.target.value.trim()) {
 		filters.text = e.target.value.trim();
-		if (!(!filters.text && !filters.favorites)) click();
+		if (!(!filters.text && !filters.favorites)) {
+			searchInput.blur();
+			searchButton.click();
+		}
 	}
-});
+}, 1000);
+
 const clear = debounce(() => {
 	clean(yearInput, searchInput, moviesContainer, pagination, "error");
+	Object.assign(filters, defaultFilters);
 });
 
 typeSelector.addEventListener("blur", handleSelectIcon);
@@ -42,9 +51,9 @@ typeSelector.addEventListener("change", (e) => {
 	if (searchInput.value.trim()) click();
 });
 
-yearInput.addEventListener("keyup", (e) => {
-	if (searchInput.value.trim() && e.target.value.trim() && filters.title)
-		click();
+yearInput.addEventListener("keypress", (e) => {
+	if (!e.key.match(/^[0-9]+$/)) e.preventDefault();
+	if (e.key === "Enter") searchButton.click();
 });
 
 searchInput.addEventListener("keyup", keyup);
@@ -69,17 +78,24 @@ clearButton.addEventListener("click", clear);
 favoritesButton.addEventListener("click", (e) => {
 	clean(yearInput, pagination, searchInput, moviesContainer);
 	filters.page = 1;
+	filters.text = "";
 	filters.favorites = !filters.favorites;
 	favoritesButton.classList.toggle("bg-secondary");
 	if (filters.favorites) searchButton.click();
 });
 
-closeButton.addEventListener("click", () => modal.classList.remove("show"));
+closeButton.addEventListener("click", () => {
+	navText.textContent = "";
+	body.classList.remove("modal-open");
+	modal.classList.remove("show");
+});
 
 window.addEventListener("keyup", (e) => {
 	if (e.key === "Escape" && modal.classList.contains("show"))
 		closeButton.click();
 });
+
+modal.addEventListener("scroll", setNavText);
 
 /**
  * Validates the form.
@@ -119,21 +135,25 @@ function clean(...any) {
  * Creates a span tag to display the error.
  * @param {String} error - Message to be displayed.
  * @param {HTMLElement} element - The element that caused the error.
+ * @param {String} className - The class name
  */
-function createError(error, element) {
+function createError(error, element, className = "error") {
 	const span = document.createElement("span");
-	span.classList = "error";
-	span.textContent = error;
-	element.parentElement.appendChild(span);
+	span.classList = className;
+	span.innerHTML = error;
 
-	element.focus();
+	if (element.value === undefined) element.appendChild(span);
+	else {
+		element.parentElement.appendChild(span);
+		element.focus();
+	}
 }
 
 /**
  * Handles the search.
  */
 function search() {
-	clean(moviesContainer);
+	clean(moviesContainer, pagination);
 	loader.classList.add("show");
 	request()
 		.then((res) => {
@@ -147,7 +167,7 @@ function search() {
 		})
 		.catch((error) => {
 			filters.total = 0;
-			createError(error.message, searchInput);
+			createError(error.message, moviesContainer);
 		})
 		.finally((_) => {
 			loader.classList.remove("show");
@@ -331,6 +351,7 @@ function createModal(movie) {
 		}
 	});
 	modal.classList.add("show");
+	body.classList.add("modal-open");
 }
 
 /**
@@ -494,4 +515,19 @@ function debounce(func, timeout = 300) {
 			func.apply(this, args);
 		}, timeout);
 	};
+}
+
+/**
+ * Sets the nav text
+ * @param {Event} e - Event
+ */
+function setNavText(e) {
+	const header = document.querySelector(".header");
+	if (!header) return;
+
+	const scrollTop = e.target.scrollTop;
+	const height = header.offsetHeight;
+	const offset = header.offsetTop - 40;
+
+	navText.textContent = scrollTop > offset + height ? header.textContent : "";
 }
