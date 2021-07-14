@@ -1,14 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
 
 :root {
+	--hue-color: 290;
 	--body-font: "Poppins", sans-serif;
 
-	--body-color: #12181b;
-	--accent-color: #2e363f;
-	--font-color: #b2becd;
-	--title-color: #ffffff;
-	--primary-color: #46a276;
-	--secondary-color: #f9f871;
+	--body-color: hsl(var(--hue-color), 30%, 6%);
+	--accent-color: hsl(var(--hue-color), 20%, 15%);
+	--font-color: hsl(var(--hue-color), 8%, 75%);
+	--title-color: hsl(var(--hue-color), 8%, 95%);
+	--primary-color: hsl(var(--hue-color), 50%, 50%);
+	--secondary-color: hsl(var(--hue-color), 30%, 70%);
+	--text-color: hsl(var(--hue-color), 100%, 85%);
 
 	--border-radius: 50px;
 	--btn-size: 30px;
@@ -76,6 +78,7 @@ select {
 	padding: 0 calc(var(--btn-size) + 10px) 0 20px;
 	border-radius: var(--border-radius);
 	background-color: var(--accent-color);
+	-webkit-appearance: none;
 }
 /* <--------------- HEADER ---------------> */
 .type {
@@ -147,7 +150,7 @@ body.container {
 .error {
 	display: block;
 	font-size: 0.875rem;
-	color: #ffb3d2;
+	color: var(--text-color);
 	text-align: center;
 }
 
@@ -330,6 +333,8 @@ body.container {
 	left: 0;
 	z-index: var(--z-modal);
 	background-color: var(--body-color);
+	max-height: 100%;
+	overflow-y: auto;
 }
 
 .modal .container {
@@ -337,6 +342,7 @@ body.container {
 	min-height: 100vh;
 	flex-direction: column;
 	justify-content: center;
+	padding-top: 3rem;
 }
 
 .genres {
@@ -348,7 +354,7 @@ body.container {
 
 .tag {
 	font-size: 10px;
-	color: white;
+	color: var(--title-color);
 	background-color: var(--primary-color);
 	padding: 3px 6px;
 	text-transform: uppercase;
@@ -437,7 +443,7 @@ body.container {
 
 .nav-header {
 	position: absolute;
-	color: white;
+	color: var(--title-color);
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -524,15 +530,6 @@ body.container {
 
 /* <--------------- MODAL ---------------> */
 @media screen and (max-width: 768px) {
-	.modal {
-		max-height: 100%;
-		overflow-y: auto;
-	}
-
-	.modal .container {
-		margin-top: 49px;
-	}
-
 	.genres,
 	.header {
 		padding: 0 1rem;
