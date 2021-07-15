@@ -255,6 +255,7 @@ function createCard(movie) {
 	poster.addEventListener("click", (e) => {
 		loader.classList.add("show");
 		modal.classList.add("show");
+		body.classList.add("modal-open");
 		modal.lastElementChild.innerHTML = "";
 		filters.imdbID = e.target.id;
 		request()
@@ -351,7 +352,6 @@ function createModal(movie) {
 		}
 	});
 	modal.classList.add("show");
-	body.classList.add("modal-open");
 }
 
 /**
