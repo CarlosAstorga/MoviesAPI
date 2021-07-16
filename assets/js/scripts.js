@@ -13,6 +13,8 @@ const loader = document.getElementById("loader");
 const clearButton = document.getElementById("clearBtn");
 const body = document.querySelector("body");
 const navText = document.getElementById("navText");
+const colorButton = document.getElementById("colorBtn");
+const colorInput = document.getElementById("colorInput");
 
 const filters = {
 	type: "",
@@ -96,6 +98,22 @@ window.addEventListener("keyup", (e) => {
 });
 
 modal.addEventListener("scroll", setNavText);
+
+colorButton.addEventListener("click", () => {
+	colorInput.click();
+});
+
+colorInput.addEventListener("change", (e) => {
+	const color = e.target.value;
+
+	const r = parseInt(color.substr(1, 2), 16);
+	const g = parseInt(color.substr(3, 2), 16);
+	const b = parseInt(color.substr(5, 2), 16);
+	let hue = rgbToHsl(r, g, b)[0] * 360;
+
+	document.documentElement.style.setProperty("--hue-color", hue);
+	localStorage.setItem("themeColor", hue);
+});
 
 /**
  * Validates the form.
@@ -530,4 +548,41 @@ function setNavText(e) {
 	const offset = header.offsetTop - 40;
 
 	navText.textContent = scrollTop > offset + height ? header.textContent : "";
+}
+
+/**
+ * Converts rgb to hsl
+ * @param {Number} r - Red
+ * @param {Number} g - Green
+ * @param {Number} b - Blue
+ * @returns {Array} HSL
+ */
+function rgbToHsl(r, g, b) {
+	(r /= 255), (g /= 255), (b /= 255);
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	let h,
+		s,
+		l = (max + min) / 2;
+
+	if (max == min) {
+		h = s = 0;
+	} else {
+		const d = max - min;
+		s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+		switch (max) {
+			case r:
+				h = (g - b) / d + (g < b ? 6 : 0);
+				break;
+			case g:
+				h = (b - r) / d + 2;
+				break;
+			case b:
+				h = (r - g) / d + 4;
+				break;
+		}
+		h /= 6;
+	}
+
+	return [h, s, l];
 }
