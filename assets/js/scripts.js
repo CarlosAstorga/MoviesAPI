@@ -1,588 +1,299 @@
-const baseUri = "http://www.omdbapi.com/?apikey=479403fc";
-const yearInput = document.getElementById("yearInput");
-const typeIcon = document.querySelector(".type .btn i");
-const searchInput = document.getElementById("searchInput");
-const typeSelector = document.querySelector(".select");
-const searchButton = document.getElementById("searchBtn");
-const moviesContainer = document.querySelector(".movies");
-const pagination = document.querySelector(".pagination");
-const favoritesButton = document.getElementById("favoritesBtn");
-const modal = document.getElementById("modal");
-const closeButton = document.getElementById("closeBtn");
-const loader = document.getElementById("loader");
-const clearButton = document.getElementById("clearBtn");
-const body = document.querySelector("body");
-const navText = document.getElementById("navText");
-const colorButton = document.getElementById("colorBtn");
-const colorInput = document.getElementById("colorInput");
+import { clean, createMessage, toggleClass } from "./utility.js";
 
+let imdbID = "";
+let favPage = false;
+const body = document.querySelector("body");
+const year = document.getElementById("yearInput");
+const caret = document.querySelector(".type .btn i");
+const modal = document.getElementById("modal");
+const loader = document.getElementById("loader");
+const navText = document.getElementById("navText");
+const selector = document.querySelector(".select");
+const container = document.querySelector(".movies");
+const pagination = document.querySelector(".pagination");
+const colorInput = document.getElementById("colorInput");
+const searchInput = document.getElementById("searchInput");
+const closeButton = document.getElementById("closeBtn");
+const clearButton = document.getElementById("clearBtn");
+const colorButton = document.getElementById("colorBtn");
+const searchButton = document.getElementById("searchBtn");
+const favoritesButton = document.getElementById("favoritesBtn");
 const filters = {
-	type: "",
+	type: "all",
 	year: "",
 	title: "",
 	page: 1,
-	imdbID: "",
-	total: "",
-	favorites: false,
-	movies: [],
-	text: "",
+	data: [],
+	total: 0,
+	render() {
+		clean(container, pagination);
+		container.innerHTML = containerTemplate(this.data);
+		pagination.innerHTML = paginationTemplate(this.total, this.page);
+	},
 };
+filters.populate = search;
+const favorites = Object.assign({}, filters);
+favorites.populate = filter;
+favorites.storage = favorites.data = getFavorites();
+favorites.total = favorites.data.length;
+favorites.data = favorites.data.slice(
+	favorites.page * 10 - 10,
+	favorites.page * 10
+);
+const current = () => (favPage ? favorites : filters);
+const baseUri = "http://www.omdbapi.com/?apikey=479403fc";
+modal.addEventListener("scroll", handleScroll);
+window.addEventListener("keyup", handleEscapeKey);
+container.addEventListener("click", handleCard);
+pagination.addEventListener("click", handlePagination);
+closeButton.addEventListener("click", handleClose);
+searchButton.addEventListener("click", handleSearch);
+favoritesButton.addEventListener("click", handleFavorites);
 
-const defaultFilters = Object.assign({}, filters);
-
-const click = debounce(() => searchButton.click(), 1500);
-const keyup = debounce((e) => {
-	if (filters.text != e.target.value.trim()) {
-		filters.text = e.target.value.trim();
-		if (!(!filters.text && !filters.favorites)) {
-			searchInput.blur();
-			searchButton.click();
-		}
-	}
-}, 1000);
-
-const clear = debounce(() => {
-	clean(yearInput, searchInput, moviesContainer, pagination, "error");
-	Object.assign(filters, defaultFilters);
-});
-
-typeSelector.addEventListener("blur", handleSelectIcon);
-typeSelector.addEventListener("focus", handleSelectIcon);
-typeSelector.addEventListener("change", (e) => {
-	e.target.blur();
-	if (searchInput.value.trim()) click();
-});
-
-yearInput.addEventListener("keypress", (e) => {
-	if (!e.key.match(/^[0-9]+$/)) e.preventDefault();
-	if (e.key === "Enter") searchButton.click();
-});
-
-searchInput.addEventListener("keyup", keyup);
-
-searchButton.addEventListener("click", () => {
-	if (validate()) {
-		filters.type = typeSelector.value;
-		filters.year = yearInput.value.trim();
-		if (filters.title != searchInput.value.trim()) {
-			filters.page = 1;
-			filters.title = searchInput.value.trim();
-		}
-		filters.imdbID = "";
-
-		if (filters.favorites) filter();
-		else search();
-	}
-});
-
-clearButton.addEventListener("click", clear);
-
-favoritesButton.addEventListener("click", (e) => {
-	clean(yearInput, pagination, searchInput, moviesContainer);
-	filters.page = 1;
-	filters.text = "";
-	filters.favorites = !filters.favorites;
-	favoritesButton.classList.toggle("bg-secondary");
-	if (filters.favorites) searchButton.click();
-});
-
-closeButton.addEventListener("click", () => {
-	navText.textContent = "";
-	body.classList.remove("modal-open");
-	modal.classList.remove("show");
-});
-
-window.addEventListener("keyup", (e) => {
-	if (e.key === "Escape" && modal.classList.contains("show"))
-		closeButton.click();
-});
-
-modal.addEventListener("scroll", setNavText);
-
-colorButton.addEventListener("click", () => {
-	colorInput.click();
-});
-
-colorInput.addEventListener("change", (e) => {
-	const color = e.target.value;
-
-	const r = parseInt(color.substr(1, 2), 16);
-	const g = parseInt(color.substr(3, 2), 16);
-	const b = parseInt(color.substr(5, 2), 16);
-	let hue = rgbToHsl(r, g, b)[0] * 360;
-
-	document.documentElement.style.setProperty("--hue-color", hue);
-	localStorage.setItem("themeColor", hue);
-});
-
-/**
- * Validates the form.
- * @returns {boolean} Wheter is valid or not.
- */
-function validate() {
+function handleSearch() {
+	keyup(true);
 	clean("error");
-	const numbers = /^[0-9]+$/;
-	const options = ["all", "movie", "series", "episode"];
+	if (!validate() || (searchInput.value == current().title && !favPage)) return;
+	searchInput.blur();
+	current().page = 1;
+	current().type = selector.value;
+	current().year = year.value;
+	current().title = searchInput.value;
 
-	if (yearInput.value && !yearInput.value.match(numbers))
-		createError("Must be a number", yearInput);
-	if (typeSelector.value && !options.includes(typeSelector.value))
-		createError("type not available", typeSelector);
-	if (searchInput.value.trim().length < 3 && !filters.favorites)
-		createError("The title must have at least 3 letters", searchInput);
-
-	const isValid = document.querySelector(".error");
-	return !isValid;
+	clean(container, pagination);
+	current().populate();
 }
 
-/**
- * Removes elements, sets innerHTML and so on.
- * @param  {...any} any
- */
-function clean(...any) {
-	any.forEach((_) => {
-		if (_ instanceof Element) {
-			if (_.value === undefined) _.innerHTML = "";
-			else _.value = "";
-		} else
-			document.querySelectorAll("." + _).forEach((error) => error.remove());
-	});
+function handleFavorites() {
+	clean("error");
+	favPage = !favPage;
+	favoritesButton.classList.toggle("bg-secondary");
+
+	year.value = current().year;
+	searchInput.value = current().title;
+	selector.value = current().type;
+	favPage ? filter() : current().render();
 }
 
-/**
- * Creates a span tag to display the error.
- * @param {String} error - Message to be displayed.
- * @param {HTMLElement} element - The element that caused the error.
- * @param {String} className - The class name
- */
-function createError(error, element, className = "error") {
-	const span = document.createElement("span");
-	span.classList = className;
-	span.innerHTML = error;
+function search() {
+	loader.classList.add("show");
+	request(filters)
+		.then(({ Search: data, totalResults: total }) => {
+			current().data = data;
+			current().total = total;
+			current().render();
+		})
+		.catch(({ message }) => {
+			current().data = [];
+			current().total = 0;
+			createMessage(message, container);
+		})
+		.finally(loader.classList.remove("show"));
+}
 
-	if (element.value === undefined) element.appendChild(span);
-	else {
-		element.parentElement.appendChild(span);
-		element.focus();
+function filter() {
+	const { title, year, type, page, storage } = favorites;
+	let arr = storage.filter(({ Title }) => Title.toLowerCase().includes(title));
+	if (year) arr = arr.filter(({ Year }) => Year.includes(year));
+	if (type != "all") arr = arr.filter(({ Type }) => Type == type);
+	favorites.total = arr.length;
+	favorites.data = arr.slice(page * 10 - 10, page * 10);
+	favorites.render();
+}
+
+function handleCard({ target: { tagName }, target }) {
+	const id =
+		target.id || target.previousElementSibling?.id || target.parentElement?.id;
+	if (tagName == "IMG") {
+		import("./modal.js").then(({ default: fillModal }) => {
+			modal.classList.add("show");
+			body.classList.add("modal-open");
+			if (imdbID != id) {
+				imdbID = id;
+				loader.classList.add("show");
+				modal.lastElementChild.innerHTML = "";
+				request({ imdbID }).then((movie) => {
+					fillModal(movie, () => {
+						updateStorageArray(movie);
+						return favPage ? favorites : "update";
+					});
+					loader.classList.remove("show");
+				});
+			}
+		});
+	}
+	if (tagName == "SPAN" || tagName == "I") {
+		import("./favorites.js").then(({ updatePoster, updateLocalStorage }) => {
+			const movie = current().data.find(({ imdbID }) => id == imdbID);
+			updateLocalStorage(movie);
+			updateStorageArray(movie);
+			if (favPage) {
+				if (favorites.data.length == 1 && favorites.page > 1) favorites.page--;
+				filter();
+			} else updatePoster(movie.imdbID);
+		});
 	}
 }
 
-/**
- * Handles the search.
- */
-function search() {
-	clean(moviesContainer, pagination);
-	loader.classList.add("show");
-	request()
-		.then((res) => {
-			const fragment = document.createDocumentFragment();
-			for (const movie of res.Search) fragment.appendChild(createCard(movie));
-			return { movies: fragment, total: res.totalResults };
-		})
-		.then((res) => {
-			filters.total = res.total;
-			moviesContainer.appendChild(res.movies);
-		})
-		.catch((error) => {
-			filters.total = 0;
-			createError(error.message, moviesContainer);
-		})
-		.finally((_) => {
-			loader.classList.remove("show");
-			createPagination();
-		});
+function handlePagination({ target: link, target: { className: cn } }) {
+	if (cn == "fas fa-ellipsis-h" || current().page == link.textContent) return;
+	if (cn == "prev" || cn == "fas fa-angle-left") current().page--;
+	if (cn == "next" || cn == "fas fa-angle-right") current().page++;
+	if (cn == "item") current().page = parseInt(link.textContent);
+	current().populate();
 }
 
-/**
- * Handles the select icon.
- */
-function handleSelectIcon() {
-	typeIcon.classList.toggle("fa-angle-down");
-	typeIcon.classList.toggle("fa-angle-up");
+function handleEscapeKey({ key }) {
+	if (key === "Escape" && modal.classList.contains("show")) handleClose();
 }
 
-/**
- * Generates the url using the filters.
- * @returns {String} - Url.
- */
-function generateUrl() {
-	if (filters.imdbID) return `${baseUri}&i=${filters.imdbID}&plot=full`;
+function handleScroll({ target: { scrollTop } }) {
+	const header = document.querySelector(".header");
+	if (!header) return;
 
-	let url = baseUri + "&s=" + filters.title;
-	if (filters.type != "all") url += `&type=${filters.type}`;
-	if (filters.year) url += `&y=${filters.year}`;
-	url += `&page=${filters.page}`;
-
-	return url;
+	const height = header.offsetHeight;
+	const offset = header.offsetTop - 40;
+	navText.textContent = scrollTop > offset + height ? header.textContent : "";
 }
 
-/**
- * Async fetch.
- * @returns {Promise}
- */
-async function request() {
-	const response = await fetch(generateUrl());
-	const res = await response.json();
-	if (res.Response == "False") throw Error(res.Error);
-
-	return res;
+function handleClose() {
+	navText.textContent = "";
+	modal.classList.remove("show");
+	body.classList.remove("modal-open");
 }
 
-/**
- * Creates a card with the movie information.
- * @param {Object} movie - The movie to be displayed.
- * @returns {HTMLElement} - The card element
- */
-function createCard(movie) {
-	const { Poster, Title, imdbID } = movie;
-	const icon = getIcon(imdbID);
+function validate() {
+	if (searchInput.value.trim().length < 3 && !favPage)
+		createMessage("Minimum 3 characters", searchInput);
+	return !document.querySelector(".error");
+}
 
-	const div = document.createElement("div");
-	div.classList = "poster";
-	div.innerHTML = `
+function getFavorites() {
+	return [...Object.keys(localStorage)].reduce((acc, item) => {
+		if (item.includes("tt")) acc.push(JSON.parse(localStorage.getItem(item)));
+		return acc;
+	}, []);
+}
+
+function clear() {
+	clean(year, searchInput, container, pagination, "error");
+	current().title = searchInput.value;
+	selector.value = "all";
+	if (favPage) handleSearch();
+}
+
+function containerTemplate(movies) {
+	return movies.reduce((acc, movie) => (acc += cardTemplate(movie)), "");
+}
+
+function updateStorageArray(movie) {
+	const index = favorites.storage.findIndex(
+		({ imdbID }) => imdbID == movie.imdbID
+	);
+	if (index !== -1) favorites.storage.splice(index, 1);
+	else favorites.storage.push(movie);
+	favorites.total = favorites.storage.length;
+}
+
+function cardTemplate({ Poster, Title, imdbID }) {
+	const icon = localStorage.getItem(imdbID) ? "fas" : "far";
+	const ribbon = icon == "fas" ? "ribbon favorite" : "ribbon";
+	const src = Poster == "N/A" ? "assets/img/default.png" : Poster;
+
+	return `
+    <div class="poster">
         <div class="poster-container">
-            <span class="ribbon">
+            <span 
+                class="${ribbon}" id="${imdbID}">
                 <i class="${icon} fa-star icon"></i>
             </span>
-            <img 
-                id="${imdbID}" 
-                src="${Poster == "N/A" ? "assets/img/default.png" : Poster}" 
-            />
-			<div class="backdrop"></div>
+            <img src="${src}" />
+			<div class="backdrop" style="background-image: url(${src})"></div>
         </div>
         <div class="title-container">
             <p class="title">${Title}</p>
         </div>
-    `;
-
-	const ribbon = div.firstElementChild.firstElementChild;
-	const star = ribbon.firstElementChild;
-	const poster = ribbon.nextElementSibling;
-	const backdrop = poster.nextElementSibling;
-
-	backdrop.style.backgroundImage = `url(${poster.src})`;
-	if (icon == "fas") ribbon.classList.add("favorite");
-
-	ribbon.addEventListener("click", (e) => {
-		toggleFavorite(movie);
-		toggleElementClass(star, "fas", "far");
-		toggleElementClass(ribbon, "favorite");
-		if (filters.favorites) searchButton.click();
-	});
-
-	poster.addEventListener("click", (e) => {
-		loader.classList.add("show");
-		modal.classList.add("show");
-		body.classList.add("modal-open");
-		modal.lastElementChild.innerHTML = "";
-		filters.imdbID = e.target.id;
-		request()
-			.then(createModal)
-			.catch((error) => createError(error, moviesContainer))
-			.finally((_) => loader.classList.remove("show"));
-	});
-
-	return div;
+    </div>`;
 }
 
-/**
- * Creates the modal with the movie's data.
- * @param {Object} movie - The movie to be displayed
- */
-function createModal(movie) {
-	const container = modal.lastElementChild;
-	const genres = movie.Genre.split(",").reduce((acc, current) => {
-		return (acc += `<span class="tag">${current}</span>`);
-	}, "");
+function paginationTemplate(total, page) {
+	let string = "";
+	const pages = Math.ceil(total / 10);
+	if (pages < 2) return string;
 
-	const stars = [...Array(10).keys()].reduce((acc, current) => {
-		if (current < Math.round(movie.imdbRating))
-			return (acc += `<i class="fas fa-star"></i>`);
-		else return (acc += `<i class="far fa-star"></i>`);
-	}, "");
-
-	const attrs = ["Country", "Runtime", "Director", "Actors"];
-	const data = attrs.reduce((acc, current) => {
-		if (movie[current] != "N/A") {
-			return (acc += ` <span class="subtitle">${current} </span> ${movie[current]}`);
-		} else return acc;
-	}, "");
-
-	container.innerHTML = `
-	<div class="genres">${genres}</div>
-	<h1 class="header">${movie.Title}</h1>
-	<div class="information">
-		<div class="data">
-			<p>
-				${data}
-			</p>
-			${
-				movie.imdbRating != "N/A"
-					? `<p class="rating">
-					<span class="subheader">RATING:</span> ${movie.imdbRating} / 10<br />
-					${stars}
-				</p>`
-					: ""
-			}
-			${
-				movie.Plot != "N/A"
-					? `<p>
-				<span class="subheader">PLOT:</span><br />
-				${movie.Plot}
-			</p>`
-					: ""
-			}
-			
-		</div>
-		<div class="picture">
-			<img
-				src="${movie.Poster == "N/A" ? "assets/img/default.png" : movie.Poster}" 
-			/>
-		</div>
-	</div>
-	<button class="action"></button>`;
-
-	const actionButton = container.lastElementChild;
-	const backgroundColor =
-		getIcon(movie.imdbID) == "fas" ? "bg-primary" : "bg-accent";
-	actionButton.classList.add(backgroundColor);
-
-	const serButtonContent = (favorite) => {
-		if (favorite == "fas")
-			actionButton.innerHTML = `Remove from favorites <i class="fas fa-star"></i>`;
-		else
-			actionButton.innerHTML = `Add to favorites <i class="far fa-star"></i>`;
-	};
-
-	serButtonContent(getIcon(movie.imdbID));
-	actionButton.addEventListener("click", () => {
-		toggleFavorite(movie);
-		serButtonContent(getIcon(movie.imdbID));
-		toggleElementClass(actionButton, "bg-primary", "bg-accent");
-
-		if (filters.favorites) searchButton.click();
-		else {
-			const poster = document.getElementById(movie.imdbID);
-			const ribbon = poster.previousElementSibling;
-			const star = ribbon.firstElementChild;
-			toggleElementClass(star, "fas", "far");
-			toggleElementClass(ribbon, "favorite");
-		}
-	});
-	modal.classList.add("show");
-}
-
-/**
- * Gets the icon class
- * @param {Number} imdbID - Movie id.
- * @returns {String} - The icon class.
- */
-function getIcon(imdbID) {
-	return localStorage.getItem(imdbID) ? "fas" : "far";
-}
-
-/**
- * Toggle the movie in the localStorage.
- * @param {Object} movie - The movie to be stored in the localStorage .
- */
-function toggleFavorite(movie) {
-	getIcon(movie.imdbID) == "fas"
-		? localStorage.removeItem(`${movie.imdbID}`)
-		: localStorage.setItem(`${movie.imdbID}`, JSON.stringify(movie));
-}
-
-/**
- * Toggle element class
- * @param {HTMLElement} element - The DOM element
- * @param  {...String} classes - The css classes to toggle
- */
-function toggleElementClass(element, ...classes) {
-	classes.forEach((_) => element.classList.toggle(_));
-}
-
-/**
- * Creates the pagination.
- */
-function createPagination() {
-	clean(pagination);
-
-	const pages = Math.ceil(filters.total / 10);
-	if (pages < 2) return;
-
-	const beforePage = filters.page - 1;
-	const afterPage = pages - filters.page;
-	const fragment = document.createDocumentFragment();
+	const beforePage = page - 1;
+	const afterPage = pages - page;
 
 	if (beforePage > 0) {
-		fragment.appendChild(
-			createPaginationItem("prev", '<i class="fas fa-angle-left"></i>')
-		);
-
+		string += `<a class="prev"><i class="fas fa-angle-left"></i></a>`;
 		if (beforePage < 4)
 			for (let index = 1; index <= beforePage; index++)
-				fragment.appendChild(createPaginationItem("item", index));
+				string += `<a class="item">${index}</a>`;
 		else {
-			fragment.appendChild(createPaginationItem("item", 1));
-			fragment.appendChild(
-				createPaginationItem("ellipsis", '<i class="fas fa-ellipsis-h"></i>')
-			);
-			fragment.appendChild(createPaginationItem("item", filters.page - 1));
+			string += `<a class="item">1</a>`;
+			string += `<a class="ellipsis"><i class="fas fa-ellipsis-h"></i></a>`;
+			string += `<a class="item">${page - 1}</a>`;
 		}
 	}
 
-	fragment.appendChild(createPaginationItem("item active", filters.page));
+	string += `<a class="item active">${page}</a>`;
 
 	if (afterPage > 0) {
 		if (afterPage < 4)
 			for (let index = 1; index <= afterPage; index++)
-				fragment.appendChild(
-					createPaginationItem("item", filters.page + index)
-				);
+				string += `<a class="item">${page + index}</a>`;
 		else {
-			fragment.appendChild(createPaginationItem("item", filters.page + 1));
-			fragment.appendChild(
-				createPaginationItem("ellipsis", '<i class="fas fa-ellipsis-h"></i>')
-			);
-			fragment.appendChild(createPaginationItem("item", pages));
+			string += `<a class="item">${page + 1}</a>`;
+			string += `<a class="ellipsis"><i class="fas fa-ellipsis-h"></i></a>`;
+			string += `<a class="item">${pages}</a>`;
 		}
-		fragment.appendChild(
-			createPaginationItem("next", '<i class="fas fa-angle-right"></i>')
-		);
+		string += `<a class="next"><i class="fas fa-angle-right"></i></a>`;
 	}
-	pagination.appendChild(fragment);
+	return string;
 }
 
-/**
- * Creates pagination item
- * @param {String} css - Class
- * @param {String} text - Text
- * @returns
- */
-function createPaginationItem(css, text) {
-	const item = document.createElement("a");
-
-	item.classList = css;
-	item.innerHTML = text;
-	if (css != "ellipsis")
-		item.addEventListener("click", (e) => {
-			if (e.target.textContent == filters.page) return null;
-			if (item.classList.contains("prev")) filters.page -= 1;
-			if (item.classList.contains("next")) filters.page += 1;
-			if (item.classList.contains("item"))
-				filters.page = parseInt(item.textContent);
-
-			searchButton.click();
-		});
-
-	return item;
+async function request(filters) {
+	const response = await fetch(generateUrl(filters));
+	const response_ = await response.json();
+	if (response_.Response == "False") throw Error(response_.Error);
+	return response_;
 }
 
-/**
- * Filters favorites
- */
-function filter() {
-	clean(moviesContainer);
-	filters.movies = getFavorites();
-	filters.total = filters.movies.length;
+function generateUrl({ imdbID, type, year, title, page }) {
+	if (imdbID) return `${baseUri}&i=${imdbID}&plot=full`;
 
-	const fragment = document.createDocumentFragment();
-	for (const movie of filters.movies.slice(
-		filters.page * 10 - 10,
-		filters.page * 10
-	))
-		moviesContainer.appendChild(fragment.appendChild(createCard(movie)));
-	createPagination();
+	let url = `${baseUri}&s=${title}&page=${page}`;
+	if (type != "all") url += `&type=${type}`;
+	if (year) url += `&y=${year}`;
+	return url;
 }
 
-/**
- * Gets the favorites from the local storage
- * @returns {Array} - Favorites
- */
-function getFavorites() {
-	let favorites = [];
-	const keys = Object.keys(localStorage);
-
-	for (const x of keys) {
-		if (x.includes("tt")) favorites.push(JSON.parse(localStorage.getItem(x)));
-	}
-
-	if (filters.type == "all" && !filters.title && !filters.year)
-		return favorites;
-
-	return favorites.filter((movie) => {
-		if (
-			(filters.title && movie.Title.toLowerCase().includes(filters.title)) ||
-			(filters.type && filters.type != "all" && movie.Type == filters.type) ||
-			(filters.year && movie.Year == filters.year)
-		)
-			return movie;
-	});
-}
-
-/**
- * Debounce function.
- * @param {Function} func - Function to debounce.
- * @param {Number} timeout - Time in milliseconds.
- * @returns {Function}
- */
 function debounce(func, timeout = 300) {
 	let timer;
 	return (...args) => {
 		clearTimeout(timer);
-		timer = setTimeout(() => {
-			func.apply(this, args);
-		}, timeout);
+		timer = setTimeout(() => func.apply(this, args), timeout);
 	};
 }
 
-/**
- * Sets the nav text
- * @param {Event} e - Event
- */
-function setNavText(e) {
-	const header = document.querySelector(".header");
-	if (!header) return;
+const icon = () => toggleClass(caret, "fa-angle-down", "fa-angle-up");
+const change = ({ target }) => target.blur();
+const keypress = (e) => (!e.key.match(/^[0-9]+$/) ? e.preventDefault() : null);
+const keyup = debounce((abort) => (abort ? null : handleSearch()), 1500);
 
-	const scrollTop = e.target.scrollTop;
-	const height = header.offsetHeight;
-	const offset = header.offsetTop - 40;
-
-	navText.textContent = scrollTop > offset + height ? header.textContent : "";
-}
-
-/**
- * Converts rgb to hsl
- * @param {Number} r - Red
- * @param {Number} g - Green
- * @param {Number} b - Blue
- * @returns {Array} HSL
- */
-function rgbToHsl(r, g, b) {
-	(r /= 255), (g /= 255), (b /= 255);
-	const max = Math.max(r, g, b);
-	const min = Math.min(r, g, b);
-	let h,
-		s,
-		l = (max + min) / 2;
-
-	if (max == min) {
-		h = s = 0;
-	} else {
-		const d = max - min;
-		s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-		switch (max) {
-			case r:
-				h = (g - b) / d + (g < b ? 6 : 0);
-				break;
-			case g:
-				h = (b - r) / d + 2;
-				break;
-			case b:
-				h = (r - g) / d + 4;
-				break;
-		}
-		h /= 6;
-	}
-
-	return [h, s, l];
-}
+selector.addEventListener("change", change);
+selector.addEventListener("blur", icon);
+selector.addEventListener("focus", icon);
+year.addEventListener("keypress", keypress);
+searchInput.addEventListener("keyup", ({ key }) => {
+	let abort = key == "Enter" ? true : false;
+	if (abort) handleSearch();
+	keyup(abort);
+});
+clearButton.addEventListener("click", clear);
+colorButton.addEventListener("click", () => colorInput.click());
+colorInput.addEventListener("change", ({ target: { value } }) => {
+	import("./color.js").then(({ default: setColorTheme }) => {
+		setColorTheme(value);
+	});
+});

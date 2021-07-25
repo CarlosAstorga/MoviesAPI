@@ -27,6 +27,10 @@
 	box-sizing: border-box;
 }
 
+html {
+	height: 100%;
+}
+
 ul {
 	margin: 0;
 	padding: 0;
@@ -90,6 +94,12 @@ header > input {
 
 input[type="color"] {
 	display: none;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+	transition: background-color 600000s 0s, color 600000s 0s;
 }
 /* <--------------- HEADER ---------------> */
 .type {
