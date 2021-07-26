@@ -140,6 +140,7 @@ function handlePagination({ target: link, target: { className: cn } }) {
 	if (cn == "prev" || cn == "fas fa-angle-left") current().page--;
 	if (cn == "next" || cn == "fas fa-angle-right") current().page++;
 	if (cn == "item") current().page = parseInt(link.textContent);
+	window.scrollTo(0, 0);
 	current().populate();
 }
 
