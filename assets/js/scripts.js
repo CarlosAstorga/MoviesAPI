@@ -119,6 +119,7 @@ function handleCard({ target: { tagName }, target }) {
 						return favPage ? favorites : "update";
 					});
 					loader.classList.remove("show");
+					height();
 				});
 			}
 		});
