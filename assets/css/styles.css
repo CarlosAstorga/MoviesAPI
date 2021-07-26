@@ -54,7 +54,7 @@ img {
 
 body {
 	height: 100%;
-	height: calc(100vh - calc(100vh - 100%));
+	height: calc(var(--vh, 1vh) * 100);
 	font-family: var(--body-font);
 	background-color: var(--body-color);
 }
@@ -194,8 +194,6 @@ body.container {
 }
 
 .poster-container img {
-	position: relative;
-	z-index: 10;
 	max-height: 300px;
 	width: 100%;
 	cursor: pointer;

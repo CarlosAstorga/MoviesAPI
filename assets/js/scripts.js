@@ -43,6 +43,7 @@ favorites.data = favorites.data.slice(
 const current = () => (favPage ? favorites : filters);
 const baseUri = "http://www.omdbapi.com/?apikey=479403fc";
 modal.addEventListener("scroll", handleScroll);
+window.addEventListener("resize", height);
 window.addEventListener("keyup", handleEscapeKey);
 container.addEventListener("click", handleCard);
 pagination.addEventListener("click", handlePagination);
@@ -277,6 +278,11 @@ function debounce(func, timeout = 300) {
 	};
 }
 
+function height() {
+	const vh = window.innerHeight * 0.01;
+	document.documentElement.style.setProperty("--vh", `${vh}px`);
+}
+
 const icon = () => toggleClass(caret, "fa-angle-down", "fa-angle-up");
 const change = ({ target }) => target.blur();
 const keypress = (e) => (!e.key.match(/^[0-9]+$/) ? e.preventDefault() : null);
@@ -298,3 +304,4 @@ colorInput.addEventListener("change", ({ target: { value } }) => {
 		setColorTheme(value);
 	});
 });
+height();
