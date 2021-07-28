@@ -19,47 +19,58 @@ import { updatePoster, getIcon, updateLocalStorage } from "./favorites.js";
 export default function fillModal(movie, callback) {
 	const container = modal.lastElementChild;
 	const bg = getIcon(movie.imdbID) == "fas" ? "bg-primary" : "bg-accent";
-	const genres = movie.Genre.split(",").reduce((acc, current) => {
-		return (acc += `<span class="tag">${current}</span>`);
-	}, "");
 
-	const stars = [...Array(10).keys()].reduce((acc, current) => {
-		if (current < Math.round(movie.imdbRating))
-			return (acc += `<i class="fas fa-star"></i>`);
-		else return (acc += `<i class="far fa-star"></i>`);
-	}, "");
+	const valid = (value) => value && value != "N/A";
+	const star = (acc, key) =>
+		(acc += `<i class="${
+			key < Math.round(movie.imdbRating) ? "fas" : "far"
+		} fa-star"></i>`);
+	const tag = (acc, tag) => (acc += `<span class="tag">${tag}</span>`);
+	const source = (src) => src != "http://127.0.0.1:5500/assets/img/default.png";
 
-	const attrs = ["Country", "Runtime", "Director", "Actors"];
-	const data = attrs.reduce((acc, current) => {
-		if (movie[current] != "N/A") {
-			return (acc += ` <span class="subtitle">${current} </span> ${movie[current]}`);
-		} else return acc;
-	}, "");
+	const genres = valid(movie.Genre)
+		? `<div class="genres">${movie.Genre.split(",").reduce(tag, "")}</div>`
+		: "";
+
+	const data = `<p>${[
+		"Country",
+		"Runtime",
+		"Director",
+		"Actors",
+		"Year",
+	].reduce(
+		(acc, current) =>
+			valid(movie[current])
+				? (acc += ` <span class="subtitle">${current} </span> ${movie[current]}`)
+				: acc,
+		""
+	)}</p>`;
+
+	const imdbRating = valid(movie.imdbRating)
+		? `<p class="rating">
+			<span class="subheader">RATING:</span> ${movie.imdbRating} / 10<br />
+			${[...Array(10).keys()].reduce(star, "")}</p>`
+		: "";
+
+	const plot = valid(movie.Plot)
+		? `<p><span class="subheader">PLOT:</span><br />${movie.Plot}</p>`
+		: "";
+
+	const src = document.getElementById(movie.imdbID).nextElementSibling.src;
+	const poster = source(src)
+		? `<div class="picture"><img src="${src}" /></div>`
+		: "";
 
 	container.innerHTML = `
-	<div class="genres">${genres}</div>
+	${genres}
 	<h1 class="header">${movie.Title}</h1>
 	<div class="information">
 		<div class="data">
-			<p>
-				${data}
-			</p>
-			${
-				movie.imdbRating != "N/A"
-					? `<p class="rating"><span class="subheader">RATING:</span> ${movie.imdbRating} / 10<br />${stars}</p>`
-					: null
-			}
-			${
-				movie.Plot != "N/A"
-					? `<p><span class="subheader">PLOT:</span><br />${movie.Plot}</p>`
-					: null
-			}
+		${data}
+		${imdbRating}
+		${plot}
 		</div>
-		<div class="picture">
-			<img
-				src="${movie.Poster == "N/A" ? "assets/img/default.png" : movie.Poster}" 
-			/>
-		</div>
+		${poster}
 	</div>
 	<button class="action ${bg}">${setButtonContent(bg)}</button>`;
 	const actionButton = container.lastElementChild;

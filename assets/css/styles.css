@@ -29,6 +29,7 @@
 
 html {
 	height: 100%;
+	height: calc(var(--vh, 1vh) * 100);
 }
 
 ul {
@@ -347,6 +348,7 @@ body.container {
 	left: 0;
 	z-index: var(--z-modal);
 	background-color: var(--body-color);
+	height: 100%;
 	height: calc(var(--vh, 1vh) * 100);
 	overflow-y: auto;
 }
@@ -354,6 +356,7 @@ body.container {
 .modal .container {
 	display: flex;
 	min-height: 100%;
+	min-height: calc(var(--vh, 1vh) * 100);
 	flex-direction: column;
 	justify-content: center;
 	padding-top: 3rem;

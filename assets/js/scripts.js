@@ -27,8 +27,7 @@ const filters = {
 	total: 0,
 	render() {
 		clean(container, pagination);
-		container.innerHTML = containerTemplate(this.data);
-		pagination.innerHTML = paginationTemplate(this.total, this.page);
+		appendMoviesAndPagination(this.data);
 	},
 };
 filters.populate = search;
@@ -54,12 +53,12 @@ favoritesButton.addEventListener("click", handleFavorites);
 function handleSearch() {
 	keyup(true);
 	clean("error");
-	if (!validate() || (searchInput.value == current().title && !favPage)) return;
+	if (!validate()) return;
 	searchInput.blur();
 	current().page = 1;
 	current().type = selector.value;
 	current().year = year.value;
-	current().title = searchInput.value;
+	current().title = searchInput.value.trim().toLowerCase();
 
 	clean(container, pagination);
 	current().populate();
@@ -100,6 +99,7 @@ function filter() {
 	favorites.total = arr.length;
 	favorites.data = arr.slice(page * 10 - 10, page * 10);
 	favorites.render();
+	if (favorites.total == 0) createMessage("Movie not found!", container);
 }
 
 function handleCard({ target: { tagName }, target }) {
@@ -124,7 +124,7 @@ function handleCard({ target: { tagName }, target }) {
 			}
 		});
 	}
-	if (tagName == "SPAN" || tagName == "I") {
+	if ((tagName == "SPAN" || tagName == "I") && target.className != "error") {
 		import("./favorites.js").then(({ updatePoster, updateLocalStorage }) => {
 			const movie = current().data.find(({ imdbID }) => id == imdbID);
 			updateLocalStorage(movie);
@@ -138,10 +138,22 @@ function handleCard({ target: { tagName }, target }) {
 }
 
 function handlePagination({ target: link, target: { className: cn } }) {
-	if (cn == "fas fa-ellipsis-h" || current().page == link.textContent) return;
-	if (cn == "prev" || cn == "fas fa-angle-left") current().page--;
-	if (cn == "next" || cn == "fas fa-angle-right") current().page++;
-	if (cn == "item") current().page = parseInt(link.textContent);
+	if (current().page == link.textContent) return;
+	switch (cn) {
+		case "prev":
+		case "fas fa-angle-left":
+			current().page--;
+			break;
+		case "item":
+			current().page = parseInt(link.textContent);
+			break;
+		case "next":
+		case "fas fa-angle-right":
+			current().page++;
+			break;
+		default:
+			return;
+	}
 	window.scrollTo(0, 0);
 	current().populate();
 }
@@ -168,7 +180,15 @@ function handleClose() {
 function validate() {
 	if (searchInput.value.trim().length < 3 && !favPage)
 		createMessage("Minimum 3 characters", searchInput);
-	return !document.querySelector(".error");
+
+	let errors = [];
+	const values = ["type", "year", "title"];
+	[selector, year, searchInput].forEach(({ value }, i) => {
+		if (value.trim().toLowerCase() == current()[values[i]]) errors.push(true);
+	});
+
+	const isValid = document.querySelector(".error") || errors.length == 3;
+	return !isValid;
 }
 
 function getFavorites() {
@@ -185,8 +205,17 @@ function clear() {
 	if (favPage) handleSearch();
 }
 
-function containerTemplate(movies) {
-	return movies.reduce((acc, movie) => (acc += cardTemplate(movie)), "");
+async function appendMoviesAndPagination(movies) {
+	const fragment = document.createDocumentFragment();
+	await Promise.all(
+		movies.map(async (movie) => {
+			await checkImgSource(movie.Poster).then((src) =>
+				fragment.appendChild(cardTemplate(movie, src))
+			);
+		})
+	);
+	container.appendChild(fragment);
+	pagination.innerHTML = paginationTemplate(current().total, current().page);
 }
 
 function updateStorageArray(movie) {
@@ -198,25 +227,35 @@ function updateStorageArray(movie) {
 	favorites.total = favorites.storage.length;
 }
 
-function cardTemplate({ Poster, Title, imdbID }) {
+function cardTemplate({ Title, imdbID }, src) {
 	const icon = localStorage.getItem(imdbID) ? "fas" : "far";
 	const ribbon = icon == "fas" ? "ribbon favorite" : "ribbon";
-	const src = Poster == "N/A" ? "assets/img/default.png" : Poster;
-
-	return `
-    <div class="poster">
-        <div class="poster-container">
-            <span 
-                class="${ribbon}" id="${imdbID}">
-                <i class="${icon} fa-star icon"></i>
-            </span>
-            <img src="${src}" />
+	const poster = document.createElement("div");
+	poster.className = "poster";
+	poster.innerHTML = `
+	<div class="poster">
+		<div class="poster-container">
+			<span
+				class="${ribbon}" id="${imdbID}">
+				<i class="${icon} fa-star icon"></i>
+			</span>
+			<img src="${src}" />
 			<div class="backdrop" style="background-image: url(${src})"></div>
-        </div>
-        <div class="title-container">
-            <p class="title">${Title}</p>
-        </div>
-    </div>`;
+		</div>
+		<div class="title-container">
+			<p class="title">${Title}</p>
+		</div>
+	</div>`;
+	return poster;
+}
+
+function checkImgSource(src) {
+	return new Promise((resolve) => {
+		const img = new Image();
+		img.src = src;
+		img.onload = () => resolve(src);
+		img.onerror = () => resolve("/assets/img/default.png");
+	});
 }
 
 function paginationTemplate(total, page) {
@@ -293,10 +332,12 @@ selector.addEventListener("change", change);
 selector.addEventListener("blur", icon);
 selector.addEventListener("focus", icon);
 year.addEventListener("keypress", keypress);
-searchInput.addEventListener("keyup", ({ key }) => {
-	let abort = key == "Enter" ? true : false;
-	if (abort) handleSearch();
-	keyup(abort);
+searchInput.addEventListener("keypress", (e) => {
+	let abort = e.key == "Enter" ? true : false;
+	if (e.key.match(/^[\w\-\s]+$/)) {
+		if (abort) handleSearch();
+		keyup(abort);
+	} else e.preventDefault();
 });
 clearButton.addEventListener("click", clear);
 colorButton.addEventListener("click", () => colorInput.click());
