@@ -6,6 +6,8 @@
 import { toggleClass } from "./utility.js";
 import { updatePoster, getIcon, updateLocalStorage } from "./favorites.js";
 
+window.addEventListener("resize", setButtonPosition);
+
 /**
  * Callback for updating the posters.
  * @callback updatePostersCallback
@@ -53,12 +55,14 @@ export default function fillModal(movie, callback) {
 		: "";
 
 	const plot = valid(movie.Plot)
-		? `<p><span class="subheader">PLOT:</span><br />${movie.Plot}</p>`
+		? `<div class="plot"><span class="subheader">PLOT:</span><br /><p>${movie.Plot}</p></div>`
 		: "";
 
 	const src = document.getElementById(movie.imdbID).nextElementSibling.src;
 	const poster = source(src)
-		? `<div class="picture"><img src="${src}" /></div>`
+		? `<div class="picture"><img src="${src}" />
+		<div class="backdrop" style="background-image: url(${src})"></div>
+		</div>`
 		: "";
 
 	container.innerHTML = `
@@ -73,6 +77,7 @@ export default function fillModal(movie, callback) {
 		${poster}
 	</div>
 	<button class="action ${bg}">${setButtonContent(bg)}</button>`;
+	setButtonPosition();
 	const actionButton = container.lastElementChild;
 	actionButton.addEventListener("click", () => {
 		updateLocalStorage(movie);
@@ -89,10 +94,33 @@ export default function fillModal(movie, callback) {
 		toggleClass(actionButton, "bg-primary", "bg-accent");
 		actionButton.innerHTML = setButtonContent(actionButton.classList[1]);
 	});
+
+	const plotElement = document.querySelector(".plot");
+	const imageElement = document.querySelector(".picture img");
+	if (!plotElement || !imageElement) return;
+	const dataElement = document.querySelector(".data");
+	if (dataElement.clientHeight - imageElement.clientHeight < 50) return;
+	const paragraph = plotElement.lastElementChild;
+	let height = 0;
+	const children = dataElement.children;
+	for (const child of children) {
+		if (child === plotElement) break;
+		height += child.clientHeight + 22.4;
+	}
+
+	plotElement.style.height = `${imageElement.clientHeight - height}px`;
+	paragraph.style.height = `${imageElement.clientHeight - height - 20}px`;
 }
 
 function setButtonContent(className) {
 	return className == "bg-primary"
 		? `Remove from favorites <i class="fas fa-star"></i>`
 		: `Add to favorites <i class="far fa-star"></i>`;
+}
+
+function setButtonPosition() {
+	const { innerHeight, innerWidth } = window;
+	const button = document.querySelector(".action");
+	if (innerHeight - 40 >= button?.offsetTop && innerWidth < 768)
+		button.classList.toggle("pfb");
 }

@@ -9,14 +9,17 @@ const modal = document.getElementById("modal");
 const loader = document.getElementById("loader");
 const navText = document.getElementById("navText");
 const selector = document.querySelector(".select");
+const filmIcon = document.querySelector(".display i");
 const container = document.querySelector(".movies");
 const pagination = document.querySelector(".pagination");
 const colorInput = document.getElementById("colorInput");
+const filmButton = document.getElementById("filmBtn");
 const searchInput = document.getElementById("searchInput");
 const closeButton = document.getElementById("closeBtn");
 const clearButton = document.getElementById("clearBtn");
 const colorButton = document.getElementById("colorBtn");
 const searchButton = document.getElementById("searchBtn");
+const modalContainer = document.querySelector(".modal .container");
 const favoritesButton = document.getElementById("favoritesBtn");
 const filters = {
 	type: "all",
@@ -41,17 +44,16 @@ favorites.data = favorites.data.slice(
 );
 const current = () => (favPage ? favorites : filters);
 const baseUri = "http://www.omdbapi.com/?apikey=479403fc";
-modal.addEventListener("scroll", handleScroll);
-window.addEventListener("resize", height);
 window.addEventListener("keyup", handleEscapeKey);
 container.addEventListener("click", handleCard);
+filmButton.addEventListener("click", handleFilmIcon);
 pagination.addEventListener("click", handlePagination);
 closeButton.addEventListener("click", handleClose);
 searchButton.addEventListener("click", handleSearch);
+modalContainer.addEventListener("scroll", handleScroll);
 favoritesButton.addEventListener("click", handleFavorites);
 
 function handleSearch() {
-	keyup(true);
 	clean("error");
 	if (!validate()) return;
 	searchInput.blur();
@@ -112,14 +114,13 @@ function handleCard({ target: { tagName }, target }) {
 			if (imdbID != id) {
 				imdbID = id;
 				loader.classList.add("show");
-				modal.lastElementChild.innerHTML = "";
+				modalContainer.innerHTML = "";
 				request({ imdbID }).then((movie) => {
 					fillModal(movie, () => {
 						updateStorageArray(movie);
 						return favPage ? favorites : "update";
 					});
 					loader.classList.remove("show");
-					height();
 				});
 			}
 		});
@@ -177,6 +178,11 @@ function handleClose() {
 	body.classList.remove("modal-open");
 }
 
+function handleFilmIcon() {
+	container.classList.toggle("film");
+	toggleClass(filmIcon, "fa-columns", "fa-film");
+}
+
 function validate() {
 	if (searchInput.value.trim().length < 3 && !favPage)
 		createMessage("Minimum 3 characters", searchInput);
@@ -206,6 +212,8 @@ function clear() {
 }
 
 async function appendMoviesAndPagination(movies) {
+	const isOpen = body.classList.contains("modal-open");
+	if (!isOpen) loader.classList.add("show");
 	const fragment = document.createDocumentFragment();
 	await Promise.all(
 		movies.map(async (movie) => {
@@ -216,6 +224,7 @@ async function appendMoviesAndPagination(movies) {
 	);
 	container.appendChild(fragment);
 	pagination.innerHTML = paginationTemplate(current().total, current().page);
+	if (!isOpen) loader.classList.remove("show");
 }
 
 function updateStorageArray(movie) {
@@ -233,7 +242,6 @@ function cardTemplate({ Title, imdbID }, src) {
 	const poster = document.createElement("div");
 	poster.className = "poster";
 	poster.innerHTML = `
-	<div class="poster">
 		<div class="poster-container">
 			<span
 				class="${ribbon}" id="${imdbID}">
@@ -244,8 +252,7 @@ function cardTemplate({ Title, imdbID }, src) {
 		</div>
 		<div class="title-container">
 			<p class="title">${Title}</p>
-		</div>
-	</div>`;
+		</div>`;
 	return poster;
 }
 
@@ -318,25 +325,20 @@ function debounce(func, timeout = 300) {
 	};
 }
 
-function height() {
-	const vh = window.innerHeight * 0.01;
-	document.documentElement.style.setProperty("--vh", `${vh}px`);
-}
-
 const icon = () => toggleClass(caret, "fa-angle-down", "fa-angle-up");
 const change = ({ target }) => target.blur();
-const keypress = (e) => (!e.key.match(/^[0-9]+$/) ? e.preventDefault() : null);
-const keyup = debounce((abort) => (abort ? null : handleSearch()), 1500);
+const numbers = (e) => (!e.key.match(/^[0-9]+$/) ? e.preventDefault() : null);
+const dbSearch = debounce((abort) => (abort ? null : handleSearch()), 1500);
 
 selector.addEventListener("change", change);
 selector.addEventListener("blur", icon);
 selector.addEventListener("focus", icon);
-year.addEventListener("keypress", keypress);
-searchInput.addEventListener("keypress", (e) => {
+year.addEventListener("keydown", numbers);
+searchInput.addEventListener("keydown", (e) => {
 	let abort = e.key == "Enter" ? true : false;
 	if (e.key.match(/^[\w\-\s]+$/)) {
 		if (abort) handleSearch();
-		keyup(abort);
+		dbSearch(abort);
 	} else e.preventDefault();
 });
 clearButton.addEventListener("click", clear);
@@ -346,4 +348,3 @@ colorInput.addEventListener("change", ({ target: { value } }) => {
 		setColorTheme(value);
 	});
 });
-height();
