@@ -6,8 +6,6 @@
 import { toggleClass } from "./utility.js";
 import { updatePoster, getIcon, updateLocalStorage } from "./favorites.js";
 
-window.addEventListener("resize", setButtonPosition);
-
 /**
  * Callback for updating the posters.
  * @callback updatePostersCallback
@@ -20,6 +18,7 @@ window.addEventListener("resize", setButtonPosition);
  */
 export default function fillModal(movie, callback) {
 	const container = modal.lastElementChild;
+	container.style.visibility = "hidden";
 	const bg = getIcon(movie.imdbID) == "fas" ? "bg-primary" : "bg-accent";
 
 	const valid = (value) => value && value != "N/A";
@@ -28,7 +27,7 @@ export default function fillModal(movie, callback) {
 			key < Math.round(movie.imdbRating) ? "fas" : "far"
 		} fa-star"></i>`);
 	const tag = (acc, tag) => (acc += `<span class="tag">${tag}</span>`);
-	const source = (src) => src != "http://127.0.0.1:5500/assets/img/default.png";
+	const source = (src) => src != `${window.location}assets/img/default.png`;
 
 	const genres = valid(movie.Genre)
 		? `<div class="genres">${movie.Genre.split(",").reduce(tag, "")}</div>`
@@ -77,7 +76,6 @@ export default function fillModal(movie, callback) {
 		${poster}
 	</div>
 	<button class="action ${bg}">${setButtonContent(bg)}</button>`;
-	setButtonPosition();
 	const actionButton = container.lastElementChild;
 	actionButton.addEventListener("click", () => {
 		updateLocalStorage(movie);
@@ -97,30 +95,38 @@ export default function fillModal(movie, callback) {
 
 	const plotElement = document.querySelector(".plot");
 	const imageElement = document.querySelector(".picture img");
-	if (!plotElement || !imageElement) return;
-	const dataElement = document.querySelector(".data");
-	if (dataElement.clientHeight - imageElement.clientHeight < 50) return;
-	const paragraph = plotElement.lastElementChild;
-	let height = 0;
-	const children = dataElement.children;
-	for (const child of children) {
-		if (child === plotElement) break;
-		height += child.clientHeight + 22.4;
+	if (!plotElement || !imageElement) {
+		container.removeAttribute("style");
+		return;
 	}
 
-	plotElement.style.height = `${imageElement.clientHeight - height}px`;
-	paragraph.style.height = `${imageElement.clientHeight - height - 20}px`;
+	imageElement.addEventListener("load", () => {
+		const dataElement = document.querySelector(".data");
+		const paragraph = plotElement.lastElementChild;
+		let height = 0;
+		const children = dataElement.children;
+		for (const child of children) {
+			if (child === plotElement) break;
+			height += child.clientHeight + 22.4;
+		}
+
+		if (Math.round((imageElement.clientHeight - height) / 25) > 2) {
+			if (window.innerHeight < 768) {
+				plotElement.style.maxHeight = "173px";
+				paragraph.style.maxHeight = "150px";
+			} else {
+				plotElement.style.height = `${imageElement.clientHeight - height}px`;
+				paragraph.style.height = `${imageElement.clientHeight - height - 23}px`;
+			}
+		} else {
+			imageElement.parentElement.style.display = "flex";
+		}
+		container.removeAttribute("style");
+	});
 }
 
 function setButtonContent(className) {
 	return className == "bg-primary"
 		? `Remove from favorites <i class="fas fa-star"></i>`
 		: `Add to favorites <i class="far fa-star"></i>`;
-}
-
-function setButtonPosition() {
-	const { innerHeight, innerWidth } = window;
-	const button = document.querySelector(".action");
-	if (innerHeight - 40 >= button?.offsetTop && innerWidth < 768)
-		button.classList.toggle("pfb");
 }

@@ -194,7 +194,6 @@ body.container {
 
 .poster-container img {
 	max-height: 300px;
-	width: 100%;
 	cursor: pointer;
 	border-radius: 5px 5px 0 0;
 }
@@ -336,12 +335,6 @@ body.container {
 .bg-accent {
 	background-color: var(--accent-color);
 }
-
-.pfb {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-}
 /* <--------------- MODAL ---------------> */
 .modal {
 	display: none;
@@ -360,6 +353,10 @@ body.container {
 	height: 100%;
 	flex-direction: column;
 	justify-content: center;
+}
+
+.modal .container * {
+	flex-shrink: 0;
 }
 
 .genres {
@@ -415,7 +412,7 @@ body.container {
 }
 
 .subtitle {
-	color: var(--accent-color);
+	color: var(--primary-color);
 }
 
 .data > :not(:first-child) {
@@ -424,6 +421,20 @@ body.container {
 
 .plot p {
 	overflow-y: auto;
+	scrollbar-color: var(--accent-color) var(--body-color);
+	scrollbar-width: thin;
+}
+
+.plot p::-webkit-scrollbar {
+	width: 8px;
+}
+
+.plot p::-webkit-scrollbar-track {
+	background-color: var(--body-color);
+}
+
+.plot p::-webkit-scrollbar-thumb {
+	background-color: var(--accent-color);
 }
 
 .action {
@@ -598,12 +609,12 @@ body.container {
 	}
 
 	.modal .container {
-		display: block;
 		position: absolute;
 		top: 0;
 		left: 0;
 		overflow: auto;
 		padding-top: 3rem;
+		justify-content: space-between;
 	}
 
 	.picture .backdrop {
