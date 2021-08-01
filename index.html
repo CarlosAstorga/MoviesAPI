@@ -22,7 +22,7 @@
 					<option value="series">Serie</option>
 					<option value="episode">Episode</option>
 				</select>
-				<span class="btn inner"><i class="fas fa-angle-up"></i></span>
+				<button class="btn inner"><i class="fas fa-angle-up"></i></button>
 			</div>
 			<input
 				class="year"
@@ -35,38 +35,41 @@
 			/>
 			<div class="search">
 				<input type="text" placeholder="Type to search" id="searchInput" />
-				<div class="btn inner" id="searchBtn">
+				<button class="btn inner" id="searchBtn">
 					<i class="fas fa-search"></i>
-				</div>
+				</button>
 			</div>
-			<div class="btn clear" id="clearBtn">
+			<button class="btn clear" id="clearBtn">
 				<i class="fas fa-eraser"></i>
-			</div>
-			<div class="btn color" id="colorBtn">
+			</button>
+			<button class="btn color" id="colorBtn">
 				<input type="color" id="colorInput" />
 				<i class="fas fa-palette"></i>
-			</div>
-			<div class="btn favorites" id="favoritesBtn">
+			</button>
+			<button class="btn favorites" id="favoritesBtn">
 				<i class="fas fa-star"></i>
-			</div>
-			<div class="btn display" id="filmBtn">
+			</button>
+			<button class="btn display" id="reelBtn">
 				<i class="fas fa-film"></i>
-			</div>
+			</button>
 		</header>
 		<main class="movies grid"></main>
-		<div class="pagination"></div>
+		<nav class="pagination"></nav>
 		<div id="modal" class="modal">
-			<div class="nav">
+			<nav class="nav">
 				<div class="nav-header">
 					<p class="nav-text" id="navText"></p>
 				</div>
-				<span class="close-btn" id="closeBtn">
+				<button class="close-btn" id="closeBtn">
 					<i class="fas fa-times"></i>
-				</span>
-			</div>
+				</button>
+			</nav>
 			<div class="container"></div>
 		</div>
 		<div class="loader" id="loader"></div>
+		<button class="scroll-to-top faded-out">
+			<i class="fas fa-chevron-up"></i>
+		</button>
 		<script
 			src="https://kit.fontawesome.com/f28e386e36.js"
 			crossorigin="anonymous"

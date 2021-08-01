@@ -9,11 +9,11 @@ const modal = document.getElementById("modal");
 const loader = document.getElementById("loader");
 const navText = document.getElementById("navText");
 const selector = document.querySelector(".select");
-const filmIcon = document.querySelector(".display i");
+const reelIcon = document.querySelector(".display i");
 const container = document.querySelector(".movies");
 const pagination = document.querySelector(".pagination");
 const colorInput = document.getElementById("colorInput");
-const filmButton = document.getElementById("filmBtn");
+const reelButton = document.getElementById("reelBtn");
 const searchInput = document.getElementById("searchInput");
 const closeButton = document.getElementById("closeBtn");
 const clearButton = document.getElementById("clearBtn");
@@ -21,6 +21,7 @@ const colorButton = document.getElementById("colorBtn");
 const searchButton = document.getElementById("searchBtn");
 const modalContainer = document.querySelector(".modal .container");
 const favoritesButton = document.getElementById("favoritesBtn");
+const scrollToTopButton = document.querySelector(".scroll-to-top");
 const filters = {
 	type: "all",
 	year: "",
@@ -31,6 +32,7 @@ const filters = {
 	render() {
 		clean(container, pagination);
 		appendMoviesAndPagination(this.data);
+		body.scrollTo(0, 0);
 	},
 };
 filters.populate = search;
@@ -44,9 +46,10 @@ favorites.data = favorites.data.slice(
 );
 const current = () => (favPage ? favorites : filters);
 const baseUri = "http://www.omdbapi.com/?apikey=479403fc";
+body.addEventListener("scroll", handleAnimation);
 window.addEventListener("keyup", handleEscapeKey);
 container.addEventListener("click", handleCard);
-filmButton.addEventListener("click", handleFilmIcon);
+reelButton.addEventListener("click", handleReelIcon);
 pagination.addEventListener("click", handlePagination);
 closeButton.addEventListener("click", handleClose);
 searchButton.addEventListener("click", handleSearch);
@@ -155,7 +158,6 @@ function handlePagination({ target: link, target: { className: cn } }) {
 		default:
 			return;
 	}
-	window.scrollTo(0, 0);
 	current().populate();
 }
 
@@ -178,9 +180,26 @@ function handleClose() {
 	body.classList.remove("modal-open");
 }
 
-function handleFilmIcon() {
-	container.classList.toggle("film");
-	toggleClass(filmIcon, "fa-columns", "fa-film");
+function handleReelIcon() {
+	container.classList.toggle("reel");
+	toggleClass(reelIcon, "fa-columns", "fa-film");
+}
+
+function handleAnimation({ target: { scrollTop } }) {
+	const movies = document.querySelectorAll(".movie.faded-out");
+
+	movies.forEach((movie) => {
+		let view = window.innerHeight + scrollTop;
+
+		if (movie.offsetTop < view)
+			requestAnimationFrame(() => {
+				movie.classList.remove("faded-out");
+			});
+	});
+
+	if (scrollTop > window.innerHeight)
+		scrollToTopButton.classList.remove("faded-out");
+	else scrollToTopButton.classList.add("faded-out");
 }
 
 function validate() {
@@ -193,6 +212,7 @@ function validate() {
 		if (value.trim().toLowerCase() == current()[values[i]]) errors.push(true);
 	});
 
+	if (favPage && errors.length == 3) errors = [];
 	const isValid = document.querySelector(".error") || errors.length == 3;
 	return !isValid;
 }
@@ -225,6 +245,10 @@ async function appendMoviesAndPagination(movies) {
 	container.appendChild(fragment);
 	pagination.innerHTML = paginationTemplate(current().total, current().page);
 	if (!isOpen) loader.classList.remove("show");
+	document.querySelectorAll(".movie.faded-out").forEach((movie) => {
+		if (movie.offsetTop < window.innerHeight)
+			movie.classList.remove("faded-out");
+	});
 }
 
 function updateStorageArray(movie) {
@@ -240,18 +264,18 @@ function cardTemplate({ Title, imdbID }, src) {
 	const icon = localStorage.getItem(imdbID) ? "fas" : "far";
 	const ribbon = icon == "fas" ? "ribbon favorite" : "ribbon";
 	const poster = document.createElement("div");
-	poster.className = "poster";
+	poster.className = "movie faded-out";
 	poster.innerHTML = `
-		<div class="poster-container">
+		<div class="poster">
+			<div class="backdrop" style="background-image: url(${src})"></div>
 			<span
 				class="${ribbon}" id="${imdbID}">
 				<i class="${icon} fa-star icon"></i>
 			</span>
 			<img src="${src}" />
-			<div class="backdrop" style="background-image: url(${src})"></div>
 		</div>
-		<div class="title-container">
-			<p class="title">${Title}</p>
+		<div class="title">
+			<p>${Title}</p>
 		</div>`;
 	return poster;
 }
@@ -329,6 +353,7 @@ const icon = () => toggleClass(caret, "fa-angle-down", "fa-angle-up");
 const change = ({ target }) => target.blur();
 const numbers = (e) => (!e.key.match(/^[0-9]+$/) ? e.preventDefault() : null);
 const dbSearch = debounce((abort) => (abort ? null : handleSearch()), 1500);
+const scrollTop = () => body.scrollTo({ top: 0, left: 0, behavior: "smooth" });
 
 selector.addEventListener("change", change);
 selector.addEventListener("blur", icon);
@@ -348,3 +373,4 @@ colorInput.addEventListener("change", ({ target: { value } }) => {
 		setColorTheme(value);
 	});
 });
+scrollToTopButton.addEventListener("click", scrollTop);

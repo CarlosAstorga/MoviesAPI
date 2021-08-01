@@ -110,16 +110,23 @@ export default function fillModal(movie, callback) {
 			height += child.clientHeight + 22.4;
 		}
 
-		if (Math.round((imageElement.clientHeight - height) / 25) > 2) {
-			if (window.innerHeight < 768) {
-				plotElement.style.maxHeight = "173px";
-				paragraph.style.maxHeight = "150px";
-			} else {
-				plotElement.style.height = `${imageElement.clientHeight - height}px`;
-				paragraph.style.height = `${imageElement.clientHeight - height - 23}px`;
+		if (window.innerWidth < 768) {
+			height = Math.round(window.innerHeight - 72 - 32 - height);
+			const remainder = height % 25;
+			height = remainder > 0 ? height - remainder : height;
+			if (plotElement.clientHeight > height) {
+				plotElement.style.maxHeight = `${height}px`;
+				paragraph.style.maxHeight = `${height - 25}px`;
 			}
 		} else {
-			imageElement.parentElement.style.display = "flex";
+			const maxLines = Math.ceil((imageElement.clientHeight - height) / 25) + 2;
+			const lines = plotElement.clientHeight / 25;
+			if (lines > maxLines) {
+				plotElement.style.height = `${imageElement.clientHeight - height}px`;
+				paragraph.style.height = `${imageElement.clientHeight - height - 25}px`;
+			} else {
+				imageElement.parentElement.style.display = "flex";
+			}
 		}
 		container.removeAttribute("style");
 	});
