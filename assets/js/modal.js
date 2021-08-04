@@ -65,15 +65,17 @@ export default function fillModal(movie, callback) {
 		: "";
 
 	container.innerHTML = `
-	${genres}
-	<h1 class="header">${movie.Title}</h1>
-	<div class="information">
-		<div class="data">
-		${data}
-		${imdbRating}
-		${plot}
+	<div class="wrapper">
+		${genres}
+		<h1 class="header">${movie.Title}</h1>
+		<div class="information">
+			<div class="data">
+			${data}
+			${imdbRating}
+			${plot}
+			</div>
+			${poster}
 		</div>
-		${poster}
 	</div>
 	<button class="action ${bg}">${setButtonContent(bg)}</button>`;
 	const actionButton = container.lastElementChild;
