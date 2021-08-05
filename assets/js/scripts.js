@@ -109,8 +109,12 @@ function filter() {
 
 function handleCard({ target: { tagName }, target }) {
 	const id =
-		target.id || target.previousElementSibling?.id || target.parentElement?.id;
-	if (tagName == "IMG") {
+		target.id ||
+		target.parentElement?.id ||
+		target.previousElementSibling?.id ||
+		target.parentElement.previousElementSibling?.children?.[1]?.id;
+
+	if (tagName == "IMG" || tagName == "P") {
 		import("./modal.js").then(({ default: fillModal }) => {
 			modal.classList.add("show");
 			body.classList.add("modal-open");
@@ -234,21 +238,26 @@ function clear() {
 async function appendMoviesAndPagination(movies) {
 	const isOpen = body.classList.contains("modal-open");
 	if (!isOpen) loader.classList.add("show");
-	const fragment = document.createDocumentFragment();
+
+	container.innerHTML = movies.reduce((acc, movie) => {
+		return (acc += cardTemplate(movie));
+	}, "");
+
 	await Promise.all(
-		movies.map(async (movie) => {
-			await checkImgSource(movie.Poster).then((src) =>
-				fragment.appendChild(cardTemplate(movie, src))
-			);
+		[...container.children].map(async (child) => {
+			await checkImgSource(child).then(([poster, image]) => {
+				const { clientHeight: hp, clientWidth: wp } = poster;
+				const { clientHeight: hi, clientWidth: wi } = image;
+				if (hp - hi > 0 && hp - hi < 90) image.classList.add("full-height");
+				if (wp - wi > 0 && wp - wi < 60) image.classList.add("full-width");
+				if (child.offsetTop < window.innerHeight)
+					child.classList.remove("faded-out");
+				if (!isOpen && loader.classList.contains("show"))
+					loader.classList.remove("show");
+			});
 		})
 	);
-	container.appendChild(fragment);
 	pagination.innerHTML = paginationTemplate(current().total, current().page);
-	if (!isOpen) loader.classList.remove("show");
-	document.querySelectorAll(".movie.faded-out").forEach((movie) => {
-		if (movie.offsetTop < window.innerHeight)
-			movie.classList.remove("faded-out");
-	});
 }
 
 function updateStorageArray(movie) {
@@ -260,32 +269,35 @@ function updateStorageArray(movie) {
 	favorites.total = favorites.storage.length;
 }
 
-function cardTemplate({ Title, imdbID }, src) {
+function cardTemplate({ Title, imdbID, Poster }) {
 	const icon = localStorage.getItem(imdbID) ? "fas" : "far";
 	const ribbon = icon == "fas" ? "ribbon favorite" : "ribbon";
-	const poster = document.createElement("div");
-	poster.className = "movie faded-out";
-	poster.innerHTML = `
+	return `
+	<div class="movie faded-out">
 		<div class="poster">
-			<div class="backdrop" style="background-image: url(${src})"></div>
+			<div class="backdrop" style="background-image: url(${Poster})"></div>
 			<span
 				class="${ribbon}" id="${imdbID}">
 				<i class="${icon} fa-star icon"></i>
 			</span>
-			<img src="${src}" />
+			<img src="${Poster}" />
 		</div>
 		<div class="title">
 			<p>${Title}</p>
-		</div>`;
-	return poster;
+		</div>
+	</div>`;
 }
 
-function checkImgSource(src) {
+function checkImgSource(movie) {
 	return new Promise((resolve) => {
-		const img = new Image();
-		img.src = src;
-		img.onload = () => resolve(src);
-		img.onerror = () => resolve("/assets/img/default.png");
+		const poster = movie.firstElementChild;
+		const image = poster.lastElementChild;
+
+		image.addEventListener("load", () => resolve([poster, image]));
+		image.addEventListener("error", () => {
+			image.src = "/assets/img/default.png";
+			image.classList.add("full-width", "full-height");
+		});
 	});
 }
 

@@ -274,6 +274,11 @@ img[src*="assets"] {
 	letter-spacing: 2px;
 }
 
+.title p:hover {
+	cursor: pointer;
+	color: var(--primary-color);
+}
+
 .backdrop {
 	position: absolute;
 	top: 0;
@@ -357,6 +362,15 @@ img[src*="assets"] {
 
 .bg-accent {
 	background-color: var(--accent-color);
+}
+
+.full-height {
+	height: 100%;
+	object-fit: cover;
+}
+
+.full-width {
+	width: 100%;
 }
 /* <--------------- MODAL ---------------> */
 .modal {
