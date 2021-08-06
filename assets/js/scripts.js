@@ -239,25 +239,29 @@ async function appendMoviesAndPagination(movies) {
 	const isOpen = body.classList.contains("modal-open");
 	if (!isOpen) loader.classList.add("show");
 
-	container.innerHTML = movies.reduce((acc, movie) => {
-		return (acc += cardTemplate(movie));
-	}, "");
-
+	const fragment = document.createDocumentFragment();
 	await Promise.all(
-		[...container.children].map(async (child) => {
-			await checkImgSource(child).then(([poster, image]) => {
-				const { clientHeight: hp, clientWidth: wp } = poster;
-				const { clientHeight: hi, clientWidth: wi } = image;
-				if (hp - hi > 0 && hp - hi < 90) image.classList.add("full-height");
-				if (wp - wi > 0 && wp - wi < 60) image.classList.add("full-width");
-				if (child.offsetTop < window.innerHeight)
-					child.classList.remove("faded-out");
-				if (!isOpen && loader.classList.contains("show"))
-					loader.classList.remove("show");
-			});
-		})
+		movies.map(
+			async (child) =>
+				await cardTemplate(child).then((movie) => fragment.appendChild(movie))
+		)
 	);
+
+	container.appendChild(fragment);
+	[...container.children].forEach((movie) => {
+		const poster = movie.firstElementChild;
+		const image = poster.lastElementChild;
+		const { clientHeight: hp, clientWidth: wp } = poster;
+		const { clientHeight: hi, clientWidth: wi } = image;
+		if (hp - hi > 0 && hp - hi < 90) image.classList.add("full-height");
+		if (wp - wi > 0 && wp - wi < 60) image.classList.add("full-width");
+		if (movie.offsetTop < window.innerHeight)
+			movie.classList.remove("faded-out");
+	});
+
 	pagination.innerHTML = paginationTemplate(current().total, current().page);
+	if (!isOpen && loader.classList.contains("show"))
+		loader.classList.remove("show");
 }
 
 function updateStorageArray(movie) {
@@ -272,32 +276,32 @@ function updateStorageArray(movie) {
 function cardTemplate({ Title, imdbID, Poster }) {
 	const icon = localStorage.getItem(imdbID) ? "fas" : "far";
 	const ribbon = icon == "fas" ? "ribbon favorite" : "ribbon";
-	return `
-	<div class="movie faded-out">
+	const card = document.createElement("div");
+	card.className = "movie faded-out";
+	card.innerHTML = `
 		<div class="poster">
 			<div class="backdrop" style="background-image: url(${Poster})"></div>
 			<span
 				class="${ribbon}" id="${imdbID}">
 				<i class="${icon} fa-star icon"></i>
 			</span>
-			<img src="${Poster}" />
 		</div>
 		<div class="title">
 			<p>${Title}</p>
-		</div>
-	</div>`;
-}
+		</div>`;
 
-function checkImgSource(movie) {
 	return new Promise((resolve) => {
-		const poster = movie.firstElementChild;
-		const image = poster.lastElementChild;
+		const image = new Image();
+		image.addEventListener("load", () => {
+			card.firstElementChild.appendChild(image);
+			resolve(card);
+		});
 
-		image.addEventListener("load", () => resolve([poster, image]));
 		image.addEventListener("error", () => {
 			image.src = "/assets/img/default.png";
 			image.classList.add("full-width", "full-height");
 		});
+		image.src = Poster;
 	});
 }
 
