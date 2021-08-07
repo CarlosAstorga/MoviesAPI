@@ -58,11 +58,6 @@ export default function fillModal(movie, callback) {
 		: "";
 
 	const src = document.getElementById(movie.imdbID).nextElementSibling.src;
-	const poster = source(src)
-		? `<div class="picture"><img src="${src}" />
-		<div class="backdrop" style="background-image: url(${src})"></div>
-		</div>`
-		: "";
 
 	container.innerHTML = `
 	<div class="wrapper">
@@ -74,7 +69,6 @@ export default function fillModal(movie, callback) {
 			${imdbRating}
 			${plot}
 			</div>
-			${poster}
 		</div>
 	</div>
 	<button class="action ${bg}">${setButtonContent(bg)}</button>`;
@@ -95,43 +89,72 @@ export default function fillModal(movie, callback) {
 		actionButton.innerHTML = setButtonContent(actionButton.classList[1]);
 	});
 
-	const plotElement = document.querySelector(".plot");
-	const imageElement = document.querySelector(".picture img");
-	if (!plotElement || !imageElement) {
-		container.removeAttribute("style");
-		return;
-	}
+	if (source(src)) {
+		const image = new Image();
 
-	imageElement.addEventListener("load", () => {
-		const dataElement = document.querySelector(".data");
-		const paragraph = plotElement.lastElementChild;
-		let height = 0;
-		const children = dataElement.children;
-		for (const child of children) {
-			if (child === plotElement) break;
-			height += child.clientHeight + 22.4;
-		}
+		image.addEventListener("load", () => {
+			const picture = document.createElement("div");
+			picture.classList.add("picture");
+			const backdrop = document.createElement("div");
+			backdrop.classList.add("backdrop");
+			backdrop.style.backgroundImage = `url(${src})`;
+			picture.appendChild(backdrop);
+			picture.appendChild(image);
+			container.firstElementChild.lastElementChild.appendChild(picture);
 
-		if (window.innerWidth < 768) {
-			height = Math.round(window.innerHeight - 72 - 32 - height);
-			const remainder = height % 25;
-			height = remainder > 0 ? height - remainder : height;
-			if (plotElement.clientHeight > height) {
-				plotElement.style.maxHeight = `${height}px`;
-				paragraph.style.maxHeight = `${height - 25}px`;
+			const plotElement = document.querySelector(".plot");
+			if (!plotElement) {
+				container.removeAttribute("style");
+				return;
 			}
-		} else {
-			const maxLines = Math.ceil((imageElement.clientHeight - height) / 25) + 2;
-			const lines = plotElement.clientHeight / 25;
-			if (lines > maxLines) {
-				plotElement.style.height = `${imageElement.clientHeight - height}px`;
-				paragraph.style.height = `${imageElement.clientHeight - height - 25}px`;
+
+			const dataElement = document.querySelector(".data");
+			const paragraph = plotElement.lastElementChild;
+			let height = 0;
+			const children = dataElement.children;
+			for (const child of children) {
+				if (child === plotElement) break;
+				height += child.clientHeight + 22.4;
+			}
+
+			if (window.innerWidth < 768) {
+				height = Math.round(window.innerHeight - 72 - 32 - height);
+				const remainder = height % 25;
+				height = remainder > 0 ? height - remainder : height;
+				if (plotElement.clientHeight > height) {
+					plotElement.style.maxHeight = `${height}px`;
+					paragraph.style.maxHeight = `${height - 25}px`;
+				}
 			} else {
-				imageElement.parentElement.style.display = "flex";
+				const remainder = image.clientHeight % 25;
+				let imageHeight =
+					remainder > 0
+						? 25 - remainder + image.clientHeight
+						: image.clientHeight;
+
+				const maxLines = Math.floor((image.clientHeight - height) / 25);
+				const lines = plotElement.clientHeight / 25;
+
+				if (lines > maxLines) {
+					if (lines - maxLines < 3) image.classList.add("full-height");
+					else {
+						if (maxLines < 7) {
+							plotElement.style.maxHeight = `${150}px`;
+							paragraph.style.height = `${125}px`;
+							image.style.marginTop =
+								(dataElement.clientHeight - image.clientHeight) / 2 + "px";
+						} else {
+							image.classList.add("full-height");
+							plotElement.style.height = `${imageHeight - height}px`;
+							paragraph.style.height = `${imageHeight - height - 25}px`;
+						}
+					}
+				}
 			}
-		}
-		container.removeAttribute("style");
-	});
+		});
+		image.src = src;
+	}
+	container.removeAttribute("style");
 }
 
 function setButtonContent(className) {
